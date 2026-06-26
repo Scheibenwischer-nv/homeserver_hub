@@ -23,45 +23,51 @@
       <div class="logo-area">
         <img src="logo.svg" alt="HomeServer Hub Logo" class="header-logo">
         <div>
-          <h1>HomeServer Hub</h1>
-          <p class="subtitle">Live Status &amp; Link-Verzeichnis</p>
+          <h1 data-i18n="app_title">HomeServer Hub</h1>
+          <p class="subtitle" data-i18n="app_subtitle">Live Status &amp; Link-Verzeichnis</p>
         </div>
       </div>
 
       <!-- Live-Statistik -->
       <div class="stats-container">
         <div class="stat-pill total">
-          <span class="label">Gesamt:</span>
+          <span class="label" data-i18n="stats_total">Gesamt:</span>
           <span class="value" id="stats-total">0</span>
         </div>
         <div class="stat-pill online">
           <span class="indicator-dot online-dot"></span>
-          <span class="label">Online:</span>
+          <span class="label" data-i18n="stats_online">Online:</span>
           <span class="value" id="stats-online">0</span>
         </div>
         <div class="stat-pill offline">
           <span class="indicator-dot offline-dot"></span>
-          <span class="label">Offline:</span>
+          <span class="label" data-i18n="stats_offline">Offline:</span>
           <span class="value" id="stats-offline">0</span>
         </div>
       </div>
 
       <!-- Controls -->
       <div class="header-controls">
-        <button id="btn-scan" class="btn btn-secondary" title="Lokales Netzwerk nach Diensten durchsuchen">
-          <i class="fa-solid fa-satellite-dish"></i> Netzwerk scannen
+        <!-- Sprachauswahl (Länderflaggen) -->
+        <div class="lang-selector">
+          <button type="button" class="lang-btn active" data-lang="de" title="Deutsch">🇩🇪</button>
+          <button type="button" class="lang-btn" data-lang="en" title="English">🇬🇧</button>
+        </div>
+        
+        <button id="btn-scan" class="btn btn-secondary" title="Lokales Netzwerk nach Diensten durchsuchen" data-i18n-title="tooltip_scan">
+          <i class="fa-solid fa-satellite-dish"></i> <span data-i18n="btn_scan">Netzwerk scannen</span>
         </button>
-        <button id="btn-refresh" class="btn btn-secondary" title="Status jetzt aktualisieren">
-          <i class="fa-solid fa-arrows-rotate"></i> Jetzt prüfen
+        <button id="btn-refresh" class="btn btn-secondary" title="Status jetzt aktualisieren" data-i18n-title="tooltip_refresh">
+          <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="btn_refresh">Jetzt prüfen</span>
         </button>
-        <button id="btn-settings" class="btn btn-secondary" title="Kategorien verwalten">
-          <i class="fa-solid fa-gear"></i> Einstellungen
+        <button id="btn-settings" class="btn btn-secondary" title="Kategorien verwalten" data-i18n-title="tooltip_settings">
+          <i class="fa-solid fa-gear"></i> <span data-i18n="btn_settings">Einstellungen</span>
         </button>
-        <button id="btn-help" class="btn btn-secondary" title="Hilfe &amp; Anleitung anzeigen">
-          <i class="fa-solid fa-circle-question"></i> Hilfe
+        <button id="btn-help" class="btn btn-secondary" title="Hilfe &amp; Anleitung anzeigen" data-i18n-title="tooltip_help">
+          <i class="fa-solid fa-circle-question"></i> <span data-i18n="btn_help">Hilfe</span>
         </button>
         <button id="btn-add-server" class="btn btn-primary">
-          <i class="fa-solid fa-plus"></i> Server hinzufügen
+          <i class="fa-solid fa-plus"></i> <span data-i18n="btn_add_server">Server hinzufügen</span>
         </button>
       </div>
     </header>
@@ -71,13 +77,13 @@
       <div class="dashboard-wrapper" id="tiles-grid">
         <!-- Kacheln werden dynamisch via JS eingefügt -->
         <div class="loading-state">
-          <i class="fa-solid fa-circle-notch fa-spin"></i> Lade Server...
+          <i class="fa-solid fa-circle-notch fa-spin"></i> <span data-i18n="loading_servers">Lade Server...</span>
         </div>
       </div>
     </main>
 
     <footer class="app-footer">
-      <p>Automatische Aktualisierung alle 30 Sekunden. Entworfen für deinen Homeserver.</p>
+      <p data-i18n="footer_text">Automatische Aktualisierung alle 30 Sekunden. Entworfen für deinen Homeserver.</p>
     </footer>
   </div>
 
@@ -85,7 +91,7 @@
   <dialog id="server-dialog" closedby="any" aria-labelledby="dialog-title">
     <div class="dialog-content">
       <header class="dialog-header">
-        <h2 id="dialog-title">Server hinzufügen</h2>
+        <h2 id="dialog-title" data-i18n="dialog_add_title">Server hinzufügen</h2>
         <button type="button" class="btn-close" id="btn-close-dialog" aria-label="Schließen">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -96,24 +102,24 @@
         <input type="hidden" id="server-id" name="id">
 
         <div class="form-group">
-          <label for="server-name">Server-Name</label>
+          <label for="server-name" data-i18n="label_server_name">Server-Name</label>
           <div class="input-wrapper">
             <i class="fa-solid fa-tag input-icon"></i>
-            <input type="text" id="server-name" name="name" placeholder="z. B. Plex Media Server" required autocomplete="off">
+            <input type="text" id="server-name" name="name" placeholder="z. B. Plex Media Server" data-i18n-placeholder="placeholder_server_name" required autocomplete="off">
           </div>
         </div>
 
         <div class="form-group">
-          <label for="server-url">URL / IP-Adresse</label>
+          <label for="server-url" data-i18n="label_server_url">URL / IP-Adresse</label>
           <div class="input-wrapper">
             <i class="fa-solid fa-link input-icon"></i>
-            <input type="text" id="server-url" name="url" placeholder="z. B. http://192.168.1.100:32400" required autocomplete="off">
+            <input type="text" id="server-url" name="url" placeholder="z. B. http://192.168.1.100:32400" data-i18n-placeholder="placeholder_server_url" required autocomplete="off">
           </div>
-          <span class="input-help">Mit http:// oder https:// (z. B. https://plex.tv)</span>
+          <span class="input-help" data-i18n="help_server_url">Mit http:// oder https:// (z. B. https://plex.tv)</span>
         </div>
 
         <div class="form-group">
-          <label for="server-category">Kategorie</label>
+          <label for="server-category" data-i18n="label_category">Kategorie</label>
           <div class="input-wrapper">
             <i class="fa-solid fa-folder input-icon"></i>
             <select id="server-category" name="category">
@@ -123,8 +129,8 @@
         </div>
 
         <div class="dialog-footer">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-dialog">Abbrechen</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-dialog">Speichern</button>
+          <button type="button" class="btn btn-secondary" id="btn-cancel-dialog" data-i18n="btn_cancel">Abbrechen</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-dialog" data-i18n="btn_save">Speichern</button>
         </div>
       </form>
     </div>
@@ -134,7 +140,7 @@
   <dialog id="settings-dialog" closedby="any" aria-labelledby="settings-dialog-title">
     <div class="dialog-content settings-dialog-content">
       <header class="dialog-header">
-        <h2 id="settings-dialog-title">Einstellungen &amp; Hilfe</h2>
+        <h2 id="settings-dialog-title" data-i18n="settings_title">Einstellungen &amp; Hilfe</h2>
         <button type="button" class="btn-close" id="btn-close-settings-dialog" aria-label="Schließen">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -143,13 +149,13 @@
       <!-- Tab-Navigationsleiste -->
       <div class="settings-tabs">
         <button type="button" class="tab-btn active" data-tab="categories">
-          <i class="fa-solid fa-folder"></i> Kategorien
+          <i class="fa-solid fa-folder"></i> <span data-i18n="tab_categories">Kategorien</span>
         </button>
         <button type="button" class="tab-btn" data-tab="telegram">
-          <i class="fa-solid fa-bell"></i> Telegram
+          <i class="fa-solid fa-bell"></i> <span data-i18n="tab_telegram">Telegram</span>
         </button>
         <button type="button" class="tab-btn" data-tab="help">
-          <i class="fa-solid fa-circle-question"></i> Hilfe &amp; Anleitung
+          <i class="fa-solid fa-circle-question"></i> <span data-i18n="tab_help">Hilfe &amp; Anleitung</span>
         </button>
       </div>
 
@@ -159,11 +165,11 @@
         <div class="tab-content active" id="tab-categories" data-tab="categories">
           <!-- Formular zum Hinzufügen einer neuen Kategorie -->
           <form id="add-category-form" style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-            <h3 style="font-size: 0.85rem; margin-bottom: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Kategorie hinzufügen</h3>
+            <h3 style="font-size: 0.85rem; margin-bottom: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="add_category_title">Kategorie hinzufügen</h3>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <div class="input-wrapper" style="flex: 2; min-width: 150px;">
                 <i class="fa-solid fa-folder input-icon"></i>
-                <input type="text" id="new-cat-name" placeholder="z. B. Smart Home" required autocomplete="off">
+                <input type="text" id="new-cat-name" placeholder="z. B. Smart Home" data-i18n-placeholder="placeholder_new_cat" required autocomplete="off">
               </div>
               <div class="input-wrapper" style="flex: 1.2; min-width: 130px;">
                 <i class="fa-solid fa-icons input-icon"></i>
@@ -175,10 +181,10 @@
                 <i class="fa-solid fa-plus"></i>
               </button>
             </div>
-            <span class="input-help">Wähle ein passendes Icon für deine Kategorie.</span>
+            <span class="input-help" data-i18n="help_new_cat">Wähle ein passendes Icon für deine Kategorie.</span>
           </form>
 
-          <h3 style="font-size: 0.85rem; margin-bottom: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Bestehende Kategorien</h3>
+          <h3 style="font-size: 0.85rem; margin-bottom: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="existing_categories_title">Bestehende Kategorien</h3>
           <div class="categories-list-area" id="categories-list-area">
             <!-- Kategorien werden hier aufgelistet -->
           </div>
@@ -187,51 +193,51 @@
         <!-- Tab 2: Telegram-Einstellungen -->
         <div class="tab-content" id="tab-telegram" data-tab="telegram">
           <div class="settings-section">
-            <h3 style="font-size: 0.85rem; margin-bottom: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Telegram Benachrichtigungen</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            <h3 style="font-size: 0.85rem; margin-bottom: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="telegram_notifications_title">Telegram Benachrichtigungen</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;" data-i18n="telegram_notifications_desc">
               Lass dich sofort per Telegram informieren, wenn ein überwachter Server offline geht.
             </p>
             
             <label class="custom-checkbox-container" style="margin-bottom: 1.25rem; display: inline-flex;">
               <input type="checkbox" id="telegram-enabled">
               <span class="checkbox-checkmark"></span>
-              <span class="checkbox-label" style="font-weight: 600;">Ausfall-Benachrichtigungen aktivieren</span>
+              <span class="checkbox-label" style="font-weight: 600;" data-i18n="telegram_enable_label">Ausfall-Benachrichtigungen aktivieren</span>
             </label>
 
             <div class="form-group" style="margin-bottom: 1rem;">
-              <label for="telegram-token" style="font-size: 0.8rem; color: var(--text-muted);">Telegram Bot-Token</label>
+              <label for="telegram-token" style="font-size: 0.8rem; color: var(--text-muted);" data-i18n="telegram_token_label">Telegram Bot-Token</label>
               <div class="input-wrapper">
                 <i class="fa-solid fa-key input-icon"></i>
-                <input type="password" id="telegram-token" placeholder="z. B. 123456789:ABCdefGhIJK..." autocomplete="off">
+                <input type="password" id="telegram-token" placeholder="z. B. 123456789:ABCdefGhIJK..." data-i18n-placeholder="placeholder_telegram_token" autocomplete="off">
               </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 1.25rem;">
-              <label for="telegram-chatid" style="font-size: 0.8rem; color: var(--text-muted);">Deine Chat-ID</label>
+              <label for="telegram-chatid" style="font-size: 0.8rem; color: var(--text-muted);" data-i18n="telegram_chatid_label">Deine Chat-ID</label>
               <div class="input-wrapper">
                 <i class="fa-solid fa-user input-icon"></i>
-                <input type="text" id="telegram-chatid" placeholder="z. B. 987654321" autocomplete="off">
+                <input type="text" id="telegram-chatid" placeholder="z. B. 987654321" data-i18n-placeholder="placeholder_telegram_chatid" autocomplete="off">
               </div>
             </div>
 
             <button type="button" id="btn-test-telegram" class="btn btn-secondary" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;">
-              <i class="fa-solid fa-paper-plane"></i> Verbindung testen
+              <i class="fa-solid fa-paper-plane"></i> <span data-i18n="telegram_test_btn">Verbindung testen</span>
             </button>
           </div>
         </div>
 
         <!-- Tab 3: Hilfe & Anleitung -->
         <div class="tab-content" id="tab-help" data-tab="help" style="font-size: 0.95rem; line-height: 1.6;">
-          <p style="margin-bottom: 1.25rem; color: var(--text-muted);">
+          <p style="margin-bottom: 1.25rem; color: var(--text-muted);" data-i18n="help_intro">
             Willkommen beim <strong>HomeServer Hub</strong>! Hier findest du eine einfache Schritt-für-Schritt-Anleitung, wie du deine Geräte verwaltest und Benachrichtigungen einrichtest.
           </p>
 
           <!-- Sektion 1 -->
           <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.25rem; border-radius: 12px; margin-bottom: 1.25rem;">
-            <h3 style="color: var(--color-primary); font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+            <h3 style="color: var(--color-primary); font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;" data-i18n="help_sec1_title">
               <i class="fa-solid fa-play"></i> 1. Erste Schritte
             </h3>
-            <p style="margin: 0;">
+            <p style="margin: 0;" data-i18n="help_sec1_desc">
               Das Dashboard prüft alle 30 Sekunden automatisch den Status deiner Geräte. 
               Drücke auf <strong>„Jetzt prüfen“</strong> im Header, um einen manuellen Check auszulösen.
             </p>
@@ -239,56 +245,56 @@
 
           <!-- Sektion 2 -->
           <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.25rem; border-radius: 12px; margin-bottom: 1.25rem;">
-            <h3 style="color: var(--color-primary); font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+            <h3 style="color: var(--color-primary); font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;" data-i18n="help_sec2_title">
               <i class="fa-solid fa-magnifying-glass"></i> 2. Geräte suchen (Netzwerk-Scan)
             </h3>
-            <p style="margin: 0 0 0.5rem 0;">
+            <p style="margin: 0 0 0.5rem 0;" data-i18n="help_sec2_desc1">
               Du musst Adressen nicht manuell eintippen! Klicke oben auf <strong>„Netzwerk scannen“</strong> und dann auf <strong>„Scan starten“</strong>.
             </p>
-            <p style="margin: 0;">
+            <p style="margin: 0;" data-i18n="help_sec2_desc2">
               Wähle nach dem Scan die gefundenen Dienste (wie Home Assistant, Plex oder Docker-Container) aus und importiere sie mit einem Klick.
             </p>
           </div>
 
           <!-- Sektion 3 -->
           <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.25rem; border-radius: 12px; margin-bottom: 1.25rem;">
-            <h3 style="color: #fbbf24; font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+            <h3 style="color: #fbbf24; font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;" data-i18n="help_sec3_title">
               <i class="fa-solid fa-bell"></i> 3. Telegram-Ausfallwarnung einrichten
             </h3>
-            <p style="margin: 0 0 0.75rem 0;">
+            <p style="margin: 0 0 0.75rem 0;" data-i18n="help_sec3_desc">
               Du kannst dich per Telegram informieren lassen, wenn ein Server offline geht. So erstellst du den dafür nötigen Bot:
             </p>
             
-            <strong style="display: block; margin-bottom: 0.25rem; color: #fff;">A. Bot erstellen (Bot-Token erhalten):</strong>
+            <strong style="display: block; margin-bottom: 0.25rem; color: #fff;" data-i18n="help_sec3_a_title">A. Bot erstellen (Bot-Token erhalten):</strong>
             <ol style="margin: 0 0 1rem 1.25rem; padding: 0;">
-              <li style="margin-bottom: 0.35rem;">Suche in Telegram nach dem Kontakt <strong>@BotFather</strong> (offizielles Profil mit blauem Haken).</li>
-              <li style="margin-bottom: 0.35rem;">Sende ihm den Befehl <code>/newbot</code>.</li>
-              <li style="margin-bottom: 0.35rem;">Gib einen Anzeigenamen ein (z. B. <i>Mein Server Wächter</i>).</li>
-              <li style="margin-bottom: 0.35rem;">Gib einen Benutzernamen ein, der auf <i>bot</i> endet (z. B. <i>mein_waechter_hub_bot</i>).</li>
-              <li style="margin-bottom: 0.35rem;">Kopiere das angezeigte <strong>Token</strong> (z. B. <code>123456789:ABCdefGh...</code>).</li>
+              <li style="margin-bottom: 0.35rem;" data-i18n="help_sec3_a_li1">Suche in Telegram nach dem Kontakt <strong>@BotFather</strong> (offizielles Profil mit blauem Haken).</li>
+              <li style="margin-bottom: 0.35rem;" data-i18n="help_sec3_a_li2">Sende ihm den Befehl <code>/newbot</code>.</li>
+              <li style="margin-bottom: 0.35rem;" data-i18n="help_sec3_a_li3">Gib einen Anzeigenamen ein (z. B. <i>Mein Server Wächter</i>).</li>
+              <li style="margin-bottom: 0.35rem;" data-i18n="help_sec3_a_li4">Gib einen Benutzernamen ein, der auf <i>bot</i> endet (z. B. <i>mein_waechter_hub_bot</i>).</li>
+              <li style="margin-bottom: 0.35rem;" data-i18n="help_sec3_a_li5">Kopiere das angezeigte <strong>Token</strong> (z. B. <code>123456789:ABCdefGh...</code>).</li>
             </ol>
 
-            <strong style="display: block; margin-bottom: 0.25rem; color: #fff;">B. Deine Chat-ID ermitteln:</strong>
+            <strong style="display: block; margin-bottom: 0.25rem; color: #fff;" data-i18n="help_sec3_b_title">B. Deine Chat-ID ermitteln:</strong>
             <ol style="margin: 0 0 1rem 1.25rem; padding: 0;">
-              <li style="margin-bottom: 0.35rem;">Suche in Telegram nach dem Kontakt <strong>@userinfobot</strong>.</li>
-              <li style="margin-bottom: 0.35rem;">Klicke auf <strong>Start</strong>. Er sendet dir sofort deine ID-Nummer zurück (z. B. <code>987654321</code>).</li>
+              <li style="margin-bottom: 0.35rem;" data-i18n="help_sec3_b_li1">Suche in Telegram nach dem Kontakt <strong>@userinfobot</strong>.</li>
+              <li style="margin-bottom: 0.35rem;" data-i18n="help_sec3_b_li2">Klicke auf <strong>Start</strong>. Er sendet dir sofort deine ID-Nummer zurück (z. B. <code>987654321</code>).</li>
             </ol>
 
-            <strong style="display: block; margin-bottom: 0.25rem; color: #fff;">C. Im Dashboard speichern:</strong>
-            <p style="margin: 0;">
+            <strong style="display: block; margin-bottom: 0.25rem; color: #fff;" data-i18n="help_sec3_c_title">C. Im Dashboard speichern:</strong>
+            <p style="margin: 0;" data-i18n="help_sec3_c_desc">
               Wähle oben den Tab <strong>„Telegram“</strong>, trage Bot-Token und Chat-ID ein, klicke auf <strong>„Verbindung testen“</strong> und speichere danach die Änderungen.
             </p>
           </div>
 
           <!-- Sektion 4 -->
           <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.25rem; border-radius: 12px;">
-            <h3 style="color: var(--color-primary); font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+            <h3 style="color: var(--color-primary); font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;" data-i18n="help_sec4_title">
               <i class="fa-solid fa-star"></i> 4. Favoriten &amp; Einklappen
             </h3>
-            <p style="margin: 0 0 0.5rem 0;">
+            <p style="margin: 0 0 0.5rem 0;" data-i18n="help_sec4_fav_desc">
               <strong>Favoriten:</strong> Klicke auf den Stern oben links einer Kachel. Sie wird dann ganz oben im Schnellzugriff-Bereich angeheftet.
             </p>
-            <p style="margin: 0;">
+            <p style="margin: 0;" data-i18n="help_sec4_collapse_desc">
               <strong>Einklappen:</strong> Klicke auf den Titel einer Kategorie (z. B. „Media“), um sie einzuklappen. Der Zustand wird automatisch gespeichert.
             </p>
           </div>
@@ -297,8 +303,8 @@
       </div>
 
       <div class="dialog-footer" style="margin-top: 1.5rem;">
-        <button type="button" class="btn btn-secondary" id="btn-cancel-settings">Schließen</button>
-        <button type="button" class="btn btn-primary" id="btn-save-settings">Änderungen speichern</button>
+        <button type="button" class="btn btn-secondary" id="btn-cancel-settings" data-i18n="btn_close">Schließen</button>
+        <button type="button" class="btn btn-primary" id="btn-save-settings" data-i18n="btn_save_changes">Änderungen speichern</button>
       </div>
     </div>
   </dialog>
@@ -307,47 +313,48 @@
   <dialog id="scan-dialog" closedby="any" aria-labelledby="scan-dialog-title">
     <div class="dialog-content scan-dialog-content">
       <header class="dialog-header">
-        <h2 id="scan-dialog-title">Netzwerk scannen</h2>
+        <h2 id="scan-dialog-title" data-i18n="scan_dialog_title">Netzwerk scannen</h2>
         <button type="button" class="btn-close" id="btn-close-scan-dialog" aria-label="Schließen">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </header>
 
       <div class="scan-status-area">
-        <p id="scan-status-text">Scan bereit. Klicke auf "Scan starten".</p>
+        <p id="scan-status-text" data-i18n="scan_status_ready">Scan bereit. Klicke auf "Scan starten".</p>
         <div class="progress-bar-container" id="scan-progress-container">
           <div class="progress-bar-fill" id="scan-progress-bar"></div>
         </div>
       </div>
 
-      <div class="scan-select-all-bar" id="scan-select-all-bar" style="display: none;">
-        <label class="custom-checkbox-container">
+      <div class="scan-select-all-bar" id="scan-select-all-bar" style="display: none; justify-content: space-between;">
+        <label class="custom-checkbox-container" style="width: auto;">
           <input type="checkbox" id="chk-select-all">
           <span class="checkbox-checkmark"></span>
-          <span class="checkbox-label">Alle auswählen (<span id="selected-count">0</span> / <span id="total-scanned-count">0</span>)</span>
+          <span class="checkbox-label" id="scan-select-all-label" data-i18n="scan_select_all">Alle auswählen</span>
         </label>
+        <span class="scan-counter" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500; display: inline-flex; align-items: center;">
+          <span id="selected-count">0</span>&nbsp;/&nbsp;<span id="total-scanned-count">0</span>
+        </span>
       </div>
 
       <div class="scan-results-area" id="scan-results-area">
         <div class="scan-info-text">
           <i class="fa-solid fa-circle-info" style="font-size: 2rem; color: var(--color-accent); margin-bottom: 0.75rem;"></i>
-          <p>Es wird dein lokales IP-Subnetz nach typischen Homeserver-Webdiensten (Home Assistant, Plex, Synology, Proxmox etc. sowie Docker-Containern) gescannt.</p>
+          <p data-i18n="scan_info_desc">Es wird dein lokales IP-Subnetz nach typischen Homeserver-Webdiensten (Home Assistant, Plex, Synology, Proxmox etc. sowie Docker-Containern) gescannt.</p>
         </div>
       </div>
 
       <div class="dialog-footer">
-        <button type="button" class="btn btn-secondary" id="btn-cancel-scan">Schließen</button>
+        <button type="button" class="btn btn-secondary" id="btn-cancel-scan" data-i18n="btn_close">Schließen</button>
         <button type="button" class="btn btn-primary" id="btn-start-scan">
-          <i class="fa-solid fa-satellite-dish"></i> Scan starten
+          <i class="fa-solid fa-satellite-dish"></i> <span data-i18n="btn_start_scan">Scan starten</span>
         </button>
         <button type="button" class="btn btn-primary" id="btn-import-selected" style="display: none;" disabled>
-          <i class="fa-solid fa-file-import"></i> Ausgewählte hinzufügen
+          <i class="fa-solid fa-file-import"></i> <span data-i18n="btn_import_selected">Ausgewählte hinzufügen</span>
         </button>
       </div>
     </div>
   </dialog>
-
-
 
   <script src="script.js" type="module"></script>
 </body>

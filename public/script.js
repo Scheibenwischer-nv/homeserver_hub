@@ -2,6 +2,305 @@
  * HOMESERVER DASHBOARD - FRONTEND LOGIC
  */
 
+const TRANSLATIONS = {
+  de: {
+    // Header & Stats
+    app_title: "HomeServer Hub",
+    app_subtitle: "Live Status & Link-Verzeichnis",
+    stats_total: "Gesamt:",
+    stats_online: "Online:",
+    stats_offline: "Offline:",
+    tooltip_scan: "Lokales Netzwerk nach Diensten durchsuchen",
+    btn_scan: "Netzwerk scannen",
+    tooltip_refresh: "Status jetzt aktualisieren",
+    btn_refresh: "Jetzt prüfen",
+    tooltip_settings: "Kategorien verwalten",
+    btn_settings: "Einstellungen",
+    tooltip_help: "Hilfe & Anleitung anzeigen",
+    btn_help: "Hilfe",
+    btn_add_server: "Server hinzufügen",
+    loading_servers: "Lade Server...",
+    footer_text: "Automatische Aktualisierung alle 30 Sekunden. Entworfen für deinen Homeserver.",
+    
+    // Status & Cards
+    status_online: "Online",
+    status_offline: "Offline",
+    status_checking: "Prüft...",
+    status_never: "Nie",
+    status_no_response: "Keine Antwort",
+    tooltip_favorite_add: "Als Favorit markieren",
+    tooltip_favorite_remove: "Als Favorit entfernen",
+    tooltip_edit: "Bearbeiten",
+    tooltip_delete: "Löschen",
+    favorites_title: "Favoriten",
+    empty_servers_text: "Noch keine Server eingerichtet.",
+    btn_add_first_server: "Ersten Server hinzufügen",
+    fallback_category: "Sonstige",
+    
+    // Add/Edit Dialog
+    dialog_add_title: "Server hinzufügen",
+    dialog_edit_title: "Server bearbeiten",
+    label_server_name: "Server-Name",
+    placeholder_server_name: "z. B. Plex Media Server",
+    label_server_url: "URL / IP-Adresse",
+    placeholder_server_url: "z. B. http://192.168.1.100:32400",
+    help_server_url: "Mit http:// oder https:// (z. B. https://plex.tv)",
+    label_category: "Kategorie",
+    btn_cancel: "Abbrechen",
+    btn_save: "Speichern",
+    
+    // Settings Dialog - General
+    settings_title: "Einstellungen & Hilfe",
+    tab_categories: "Kategorien",
+    tab_telegram: "Telegram",
+    tab_help: "Hilfe & Anleitung",
+    btn_close: "Schließen",
+    btn_save_changes: "Änderungen speichern",
+    btn_saving: "Speichert...",
+    
+    // Settings - Categories Tab
+    add_category_title: "Kategorie hinzufügen",
+    placeholder_new_cat: "z. B. Smart Home",
+    help_new_cat: "Wähle ein passendes Icon für deine Kategorie.",
+    existing_categories_title: "Bestehende Kategorien",
+    
+    // Settings - Telegram Tab
+    telegram_notifications_title: "Telegram Benachrichtigungen",
+    telegram_notifications_desc: "Lass dich sofort per Telegram informieren, wenn ein überwachter Server offline geht.",
+    telegram_enable_label: "Ausfall-Benachrichtigungen aktivieren",
+    telegram_token_label: "Telegram Bot-Token",
+    placeholder_telegram_token: "z. B. 123456789:ABCdefGhIJK...",
+    telegram_chatid_label: "Deine Chat-ID",
+    placeholder_telegram_chatid: "z. B. 987654321",
+    telegram_test_btn: "Verbindung testen",
+    telegram_testing_btn: "Sende Test...",
+    
+    // Settings - Help Tab
+    help_intro: "Willkommen beim <strong>HomeServer Hub</strong>! Hier findest du eine einfache Schritt-für-Schritt-Anleitung, wie du deine Geräte verwaltest und Benachrichtigungen einrichtest.",
+    help_sec1_title: "<i class=\"fa-solid fa-play\"></i> 1. Erste Schritte",
+    help_sec1_desc: "Das Dashboard prüft alle 30 Sekunden automatisch den Status deiner Geräte. Drücke auf <strong>„Jetzt prüfen“</strong> im Header, um einen manuellen Check auszulösen.",
+    help_sec2_title: "<i class=\"fa-solid fa-magnifying-glass\"></i> 2. Geräte suchen (Netzwerk-Scan)",
+    help_sec2_desc1: "Du musst Adressen nicht manuell eintippen! Klicke oben auf <strong>„Netzwerk scannen“</strong> und dann auf <strong>„Scan starten“</strong>.",
+    help_sec2_desc2: "Wähle nach dem Scan die gefundenen Dienste (wie Home Assistant, Plex oder Docker-Container) aus und importiere sie mit einem Klick.",
+    help_sec3_title: "<i class=\"fa-solid fa-bell\"></i> 3. Telegram-Ausfallwarnung einrichten",
+    help_sec3_desc: "Du kannst dich per Telegram informieren lassen, wenn ein Server offline geht. So erstellst du den dafür nötigen Bot:",
+    help_sec3_a_title: "A. Bot erstellen (Bot-Token erhalten):",
+    help_sec3_a_li1: "Suche in Telegram nach dem Kontakt <strong>@BotFather</strong> (offizielles Profil mit blauem Haken).",
+    help_sec3_a_li2: "Sende ihm den Befehl <code>/newbot</code>.",
+    help_sec3_a_li3: "Gib einen Anzeigenamen ein (z. B. <i>Mein Server Wächter</i>).",
+    help_sec3_a_li4: "Gib einen Benutzernamen ein, der auf <i>bot</i> endet (z. B. <i>mein_waechter_hub_bot</i>).",
+    help_sec3_a_li5: "Kopiere das angezeigte <strong>Token</strong> (z. B. <code>123456789:ABCdefGh...</code>).",
+    help_sec3_b_title: "B. Deine Chat-ID ermitteln:",
+    help_sec3_b_li1: "Suche in Telegram nach dem Kontakt <strong>@userinfobot</strong>.",
+    help_sec3_b_li2: "Klicke auf <strong>Start</strong>. Er sendet dir sofort deine ID-Nummer zurück (z. B. <code>987654321</code>).",
+    help_sec3_c_title: "C. Im Dashboard speichern:",
+    help_sec3_c_desc: "Wähle oben den Tab <strong>„Telegram“</strong>, trage Bot-Token und Chat-ID ein, klicke auf <strong>„Verbindung testen“</strong> und speichere danach die Änderungen.",
+    help_sec4_title: "<i class=\"fa-solid fa-star\"></i> 4. Favoriten &amp; Einklappen",
+    help_sec4_fav_desc: "<strong>Favoriten:</strong> Klicke auf den Stern oben links einer Kachel. Sie wird dann ganz oben im Schnellzugriff-Bereich angeheftet.",
+    help_sec4_collapse_desc: "<strong>Einklappen:</strong> Klicke auf den Titel einer Kategorie (z. B. „Media“), um sie einzuklappen. Der Zustand wird automatisch gespeichert.",
+    
+    // Scanner Dialog
+    scan_dialog_title: "Netzwerk scannen",
+    scan_status_ready: "Scan bereit. Klicke auf \"Scan starten\".",
+    scan_status_scanning: "Suche nach aktiven Geräten und Diensten... Bitte warten (ca. 5-10 Sekunden).",
+    scan_status_finished: "Scan abgeschlossen! Subnetz {subnet}.x durchsucht. {count} Dienst(e)/Container gefunden.",
+    scan_status_error: "Fehler beim Scannen des Netzwerks.",
+    scan_select_all: "Alle auswählen",
+    scan_info_desc: "Es wird dein lokales IP-Subnetz nach typischen Homeserver-Webdiensten (Home Assistant, Plex, Synology, Proxmox etc. sowie Docker-Containern) gescannt.",
+    scan_info_scanning: "Subnetz wird gescannt. Ports werden geprüft...",
+    scan_no_services: "Keine aktiven Webdienste gefunden.",
+    scan_no_services_help: "Gescannte Ports: 80, 443, 8080, 8123 (Home Assistant), 32400 (Plex), 8006 (Proxmox), 9000 (Portainer), 5001 (Synology), 2375 (Docker)",
+    btn_start_scan: "Scan starten",
+    btn_start_scan_loading: "Scanne...",
+    btn_start_scan_again: "Erneut scannen",
+    btn_import_selected: "Ausgewählte hinzufügen",
+    btn_import_selected_loading: "Hinzufügen...",
+    
+    // JS Alerts & Confirms
+    alert_delete_server: "Möchtest du den Server \"{name}\" wirklich löschen?",
+    alert_delete_server_error: "Fehler beim Löschen des Servers.",
+    alert_save_favorite_error: "Fehler beim Speichern des Favoriten-Status.",
+    alert_save_server_error: "Fehler beim Speichern des Servers.",
+    alert_telegram_test_empty: "Bitte gib zuerst Bot-Token und Chat-ID ein!",
+    alert_telegram_test_success: "Erfolg! Testnachricht gesendet. Bitte prüfe Telegram auf deinem Handy.",
+    alert_telegram_test_error: "Fehler: {error}",
+    alert_telegram_test_network_error: "Testnachricht fehlgeschlagen. Netzwerkfehler.",
+    alert_cat_name_empty: "Name darf nicht leer sein!",
+    alert_cat_exists: "Eine Kategorie mit diesem Namen existiert bereits!",
+    alert_cat_delete_confirm: "Möchtest du die Kategorie \"{name}\" wirklich löschen?",
+    alert_save_settings_error: "Fehler beim Speichern der Einstellungen: {error}",
+    alert_backend_connection_failed: "Verbindung zum Server-Backend fehlgeschlagen.",
+    btn_retry: "Erneut versuchen",
+    
+    // Icon Descriptions
+    icon_smarthome: "Smart Home (Haus-Signal)",
+    icon_media: "Medien / Streaming (Film)",
+    icon_network: "Netzwerk (Kabelnetz)",
+    icon_nas: "Speicher / NAS (Festplatte)",
+    icon_dev: "Entwicklung (Code)",
+    icon_tools: "Werkzeuge / Sonstiges (Schraubenschlüssel)",
+    icon_security: "Sicherheit / Firewall (Schild)",
+    icon_infra: "Infrastruktur (Server)",
+    icon_db: "Datenbank (Datenbank-Symbol)",
+    icon_cloud: "Cloud / Sync (Wolke)",
+    icon_gaming: "Gaming (Gamepad)",
+    icon_terminal: "Terminal / CLI (Terminal)",
+    icon_monitoring: "Überwachung (Diagramm)",
+    icon_music: "Musik / Audio (Note)",
+    icon_docs: "Dokumente / Wiki (Buch)",
+    icon_mail: "E-Mail / Kommunikation (Brief)",
+    icon_downloads: "Downloads (Download-Pfeil)"
+  },
+  en: {
+    // Header & Stats
+    app_title: "HomeServer Hub",
+    app_subtitle: "Live Status & Link Directory",
+    stats_total: "Total:",
+    stats_online: "Online:",
+    stats_offline: "Offline:",
+    tooltip_scan: "Scan local network for services",
+    btn_scan: "Scan Network",
+    tooltip_refresh: "Refresh status now",
+    btn_refresh: "Check Now",
+    tooltip_settings: "Manage categories",
+    btn_settings: "Settings",
+    tooltip_help: "Show Help & Instructions",
+    btn_help: "Help",
+    btn_add_server: "Add Server",
+    loading_servers: "Loading servers...",
+    footer_text: "Automatic update every 30 seconds. Designed for your home server.",
+    
+    // Status & Cards
+    status_online: "Online",
+    status_offline: "Offline",
+    status_checking: "Checking...",
+    status_never: "Never",
+    status_no_response: "No response",
+    tooltip_favorite_add: "Mark as favorite",
+    tooltip_favorite_remove: "Remove from favorites",
+    tooltip_edit: "Edit",
+    tooltip_delete: "Delete",
+    favorites_title: "Favorites",
+    empty_servers_text: "No servers set up yet.",
+    btn_add_first_server: "Add First Server",
+    fallback_category: "Other",
+    
+    // Add/Edit Dialog
+    dialog_add_title: "Add Server",
+    dialog_edit_title: "Edit Server",
+    label_server_name: "Server Name",
+    placeholder_server_name: "e.g. Plex Media Server",
+    label_server_url: "URL / IP Address",
+    placeholder_server_url: "e.g. http://192.168.1.100:32400",
+    help_server_url: "With http:// or https:// (e.g. https://plex.tv)",
+    label_category: "Category",
+    btn_cancel: "Cancel",
+    btn_save: "Save",
+    
+    // Settings Dialog - General
+    settings_title: "Settings & Help",
+    tab_categories: "Categories",
+    tab_telegram: "Telegram",
+    tab_help: "Help & Instructions",
+    btn_close: "Close",
+    btn_save_changes: "Save Changes",
+    btn_saving: "Saving...",
+    
+    // Settings - Categories Tab
+    add_category_title: "Add Category",
+    placeholder_new_cat: "e.g. Smart Home",
+    help_new_cat: "Choose a suitable icon for your category.",
+    existing_categories_title: "Existing Categories",
+    
+    // Settings - Telegram Tab
+    telegram_notifications_title: "Telegram Notifications",
+    telegram_notifications_desc: "Get notified immediately via Telegram if a monitored server goes offline.",
+    telegram_enable_label: "Enable offline notifications",
+    telegram_token_label: "Telegram Bot Token",
+    placeholder_telegram_token: "e.g. 123456789:ABCdefGhIJK...",
+    telegram_chatid_label: "Your Chat ID",
+    placeholder_telegram_chatid: "e.g. 987654321",
+    telegram_test_btn: "Test Connection",
+    telegram_testing_btn: "Sending Test...",
+    
+    // Settings - Help Tab
+    help_intro: "Welcome to the <strong>HomeServer Hub</strong>! Here you will find a simple step-by-step guide on how to manage your devices and set up notifications.",
+    help_sec1_title: "<i class=\"fa-solid fa-play\"></i> 1. Getting Started",
+    help_sec1_desc: "The dashboard automatically checks the status of your devices every 30 seconds. Press <strong>\"Check Now\"</strong> in the header to trigger a manual check.",
+    help_sec2_title: "<i class=\"fa-solid fa-magnifying-glass\"></i> 2. Scan Devices (Network Scan)",
+    help_sec2_desc1: "You don't need to type addresses manually! Click <strong>\"Scan Network\"</strong> at the top and then <strong>\"Start Scan\"</strong>.",
+    help_sec2_desc2: "After the scan, select the found services (like Home Assistant, Plex, or Docker containers) and import them with one click.",
+    help_sec3_title: "<i class=\"fa-solid fa-bell\"></i> 3. Set Up Telegram Downtime Warning",
+    help_sec3_desc: "You can be notified via Telegram if a server goes offline. Here is how to create the necessary bot:",
+    help_sec3_a_title: "A. Create Bot (Get Bot Token):",
+    help_sec3_a_li1: "Search for the contact <strong>@BotFather</strong> in Telegram (official profile with a blue checkmark).",
+    help_sec3_a_li2: "Send him the command <code>/newbot</code>.",
+    help_sec3_a_li3: "Enter a display name (e.g., <i>My Server Guardian</i>).",
+    help_sec3_a_li4: "Enter a username that ends in <i>bot</i> (e.g., <i>my_guardian_hub_bot</i>).",
+    help_sec3_a_li5: "Copy the displayed <strong>token</strong> (e.g., <code>123456789:ABCdefGh...</code>).",
+    help_sec3_b_title: "B. Determine Your Chat ID:",
+    help_sec3_b_li1: "Search for the contact <strong>@userinfobot</strong> in Telegram.",
+    help_sec3_b_li2: "Click <strong>Start</strong>. It will immediately send you your ID number (e.g., <code>987654321</code>).",
+    help_sec3_c_title: "C. Save in the Dashboard:",
+    help_sec3_c_desc: "Select the <strong>\"Telegram\"</strong> tab above, enter the Bot Token and Chat ID, click <strong>\"Test Connection\"</strong>, and then save the changes.",
+    help_sec4_title: "<i class=\"fa-solid fa-star\"></i> 4. Favorites &amp; Collapse",
+    help_sec4_fav_desc: "<strong>Favorites:</strong> Click the star in the top-left corner of a tile. It will be pinned to the quick access area at the very top.",
+    help_sec4_collapse_desc: "<strong>Collapse:</strong> Click the title of a category (e.g., \"Media\") to collapse it. The state is saved automatically.",
+    
+    // Scanner Dialog
+    scan_dialog_title: "Scan Network",
+    scan_status_ready: "Scan ready. Click \"Start Scan\".",
+    scan_status_scanning: "Searching for active devices and services... Please wait (approx. 5-10 seconds).",
+    scan_status_finished: "Scan finished! Subnet {subnet}.x scanned. {count} service(s)/container found.",
+    scan_status_error: "Error scanning network.",
+    scan_select_all: "Select all",
+    scan_info_desc: "Your local IP subnet will be scanned for typical home server web services (Home Assistant, Plex, Synology, Proxmox, etc. as well as Docker containers).",
+    scan_info_scanning: "Subnet is being scanned. Ports are being checked...",
+    scan_no_services: "No active web services found.",
+    scan_no_services_help: "Scanned ports: 80, 443, 8080, 8123 (Home Assistant), 32400 (Plex), 8006 (Proxmox), 9000 (Portainer), 5001 (Synology), 2375 (Docker)",
+    btn_start_scan: "Start Scan",
+    btn_start_scan_loading: "Scanning...",
+    btn_start_scan_again: "Scan Again",
+    btn_import_selected: "Add Selected",
+    btn_import_selected_loading: "Adding...",
+    
+    // JS Alerts & Confirms
+    alert_delete_server: "Are you sure you want to delete server \"{name}\"?",
+    alert_delete_server_error: "Error deleting server.",
+    alert_save_favorite_error: "Error saving favorite status.",
+    alert_save_server_error: "Error saving server.",
+    alert_telegram_test_empty: "Please enter Bot Token and Chat ID first!",
+    alert_telegram_test_success: "Success! Test message sent. Please check Telegram on your phone.",
+    alert_telegram_test_error: "Error: {error}",
+    alert_telegram_test_network_error: "Test message failed. Network error.",
+    alert_cat_name_empty: "Name cannot be empty!",
+    alert_cat_exists: "A category with this name already exists!",
+    alert_cat_delete_confirm: "Are you sure you want to delete category \"{name}\"?",
+    alert_save_settings_error: "Error saving settings: {error}",
+    alert_backend_connection_failed: "Connection to server backend failed.",
+    btn_retry: "Try again",
+    
+    // Icon Descriptions
+    icon_smarthome: "Smart Home (House Signal)",
+    icon_media: "Media / Streaming (Film)",
+    icon_network: "Network (Wired)",
+    icon_nas: "Storage / NAS (Hard Drive)",
+    icon_dev: "Development (Code)",
+    icon_tools: "Tools / Other (Wrench)",
+    icon_security: "Security / Firewall (Shield)",
+    icon_infra: "Infrastructure (Server)",
+    icon_db: "Database (Database)",
+    icon_cloud: "Cloud / Sync (Cloud)",
+    icon_gaming: "Gaming (Gamepad)",
+    icon_terminal: "Terminal / CLI (Terminal)",
+    icon_monitoring: "Monitoring (Chart)",
+    icon_music: "Music / Audio (Note)",
+    icon_docs: "Documents / Wiki (Book)",
+    icon_mail: "Email / Communication (Letter)",
+    icon_downloads: "Downloads (Download Arrow)"
+  }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const bgCanvas = document.getElementById('bg-canvas');
@@ -73,31 +372,82 @@ document.addEventListener('DOMContentLoaded', () => {
   let editingCategoryIndex = null;
 
   const PREDEFINED_ICONS = [
-    { class: 'fa-house-signal', name: 'Smart Home (Haus-Signal)' },
-    { class: 'fa-film', name: 'Medien / Streaming (Film)' },
-    { class: 'fa-network-wired', name: 'Netzwerk (Kabelnetz)' },
-    { class: 'fa-hard-drive', name: 'Speicher / NAS (Festplatte)' },
-    { class: 'fa-code', name: 'Entwicklung (Code)' },
-    { class: 'fa-screwdriver-wrench', name: 'Werkzeuge / Sonstiges (Schraubenschlüssel)' },
-    { class: 'fa-shield-halved', name: 'Sicherheit / Firewall (Schild)' },
-    { class: 'fa-server', name: 'Infrastruktur (Server)' },
-    { class: 'fa-database', name: 'Datenbank (Datenbank-Symbol)' },
-    { class: 'fa-cloud', name: 'Cloud / Sync (Wolke)' },
-    { class: 'fa-gamepad', name: 'Gaming (Gamepad)' },
-    { class: 'fa-terminal', name: 'Terminal / CLI (Terminal)' },
-    { class: 'fa-chart-line', name: 'Überwachung (Diagramm)' },
-    { class: 'fa-music', name: 'Musik / Audio (Note)' },
-    { class: 'fa-book-open', name: 'Dokumente / Wiki (Buch)' },
-    { class: 'fa-envelope', name: 'E-Mail / Kommunikation (Brief)' },
-    { class: 'fa-download', name: 'Downloads (Download-Pfeil)' }
+    { class: 'fa-house-signal', key: 'icon_smarthome' },
+    { class: 'fa-film', key: 'icon_media' },
+    { class: 'fa-network-wired', key: 'icon_network' },
+    { class: 'fa-hard-drive', key: 'icon_nas' },
+    { class: 'fa-code', key: 'icon_dev' },
+    { class: 'fa-screwdriver-wrench', key: 'icon_tools' },
+    { class: 'fa-shield-halved', key: 'icon_security' },
+    { class: 'fa-server', key: 'icon_infra' },
+    { class: 'fa-database', key: 'icon_db' },
+    { class: 'fa-cloud', key: 'icon_cloud' },
+    { class: 'fa-gamepad', key: 'icon_gaming' },
+    { class: 'fa-terminal', key: 'icon_terminal' },
+    { class: 'fa-chart-line', key: 'icon_monitoring' },
+    { class: 'fa-music', key: 'icon_music' },
+    { class: 'fa-book-open', key: 'icon_docs' },
+    { class: 'fa-envelope', key: 'icon_mail' },
+    { class: 'fa-download', key: 'icon_downloads' }
   ];
+
+  // Language (i18n) setup
+  let currentLang = localStorage.getItem('lang') || 'de';
+
+  function translate(key, replaces = {}) {
+    const langDict = TRANSLATIONS[currentLang] || TRANSLATIONS['de'];
+    let text = langDict[key] || TRANSLATIONS['de'][key] || key;
+    
+    // Replace placeholders like {name} or {count} or {subnet}
+    Object.keys(replaces).forEach(replaceKey => {
+      text = text.replace(new RegExp(`{${replaceKey}}`, 'g'), replaces[replaceKey]);
+    });
+    
+    return text;
+  }
+
+  function applyLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('lang', lang);
+
+    // Update active class on buttons
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      if (btn.getAttribute('data-lang') === lang) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Translate all elements with data-i18n
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (key.startsWith('help_sec') || key === 'help_intro') {
+        el.innerHTML = translate(key);
+      } else {
+        el.textContent = translate(key);
+      }
+    });
+
+    // Translate placeholders
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const key = el.getAttribute('data-i18n-placeholder');
+      el.setAttribute('placeholder', translate(key));
+    });
+
+    // Translate titles (tooltips)
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+      const key = el.getAttribute('data-i18n-title');
+      el.setAttribute('title', translate(key));
+    });
+  }
 
   function populateIconSelect(selectElement, selectedValue = '') {
     selectElement.innerHTML = '';
     PREDEFINED_ICONS.forEach(icon => {
       const option = document.createElement('option');
       option.value = icon.class;
-      option.textContent = icon.name;
+      option.textContent = translate(icon.key);
       if (icon.class === selectedValue) {
         option.selected = true;
       }
@@ -336,20 +686,21 @@ document.addEventListener('DOMContentLoaded', () => {
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
     
-    let timeString = 'Nie';
+    let timeString = translate('status_never');
     if (server.lastChecked) {
-      timeString = new Date(server.lastChecked).toLocaleTimeString('de-DE');
+      const locale = currentLang === 'de' ? 'de-DE' : 'en-US';
+      timeString = new Date(server.lastChecked).toLocaleTimeString(locale);
     }
 
-    let latencyHtml = `<span class="text-dimmed">Keine Antwort</span>`;
+    let latencyHtml = `<span class="text-dimmed">${translate('status_no_response')}</span>`;
     if (server.status === 'online' && server.latency !== null) {
       const latencyClass = server.latency > 200 ? 'latency-high' : '';
       latencyHtml = `<i class="fa-solid fa-gauge-high ${latencyClass}"></i> <span class="${latencyClass}">${server.latency} ms</span>`;
     } else if (server.status === 'checking') {
-      latencyHtml = `<i class="fa-solid fa-spinner fa-spin"></i> Prüft...`;
+      latencyHtml = `<i class="fa-solid fa-spinner fa-spin"></i> ${translate('status_checking')}`;
     }
 
-    const statusText = server.status === 'online' ? 'Online' : (server.status === 'checking' ? 'Prüft...' : 'Offline');
+    const statusText = server.status === 'online' ? translate('status_online') : (server.status === 'checking' ? translate('status_checking') : translate('status_offline'));
     const statusBadgeClass = server.status === 'online' ? 'status-online-badge' : (server.status === 'checking' ? 'status-checking-badge' : 'status-offline-badge');
     
     const categoryIcon = getCategoryIcon(server.category);
@@ -391,16 +742,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const isFav = server.favorite === true;
+    const favTitle = isFav ? translate('tooltip_favorite_remove') : translate('tooltip_favorite_add');
+    const editTitle = translate('tooltip_edit');
+    const deleteTitle = translate('tooltip_delete');
+    
     card.innerHTML = `
       <!-- Actions -->
       <div class="card-actions">
-        <button type="button" class="btn-icon favorite-btn ${isFav ? 'is-favorite' : ''}" title="${isFav ? 'Als Favorit entfernen' : 'Als Favorit markieren'}" data-id="${server.id}">
+        <button type="button" class="btn-icon favorite-btn ${isFav ? 'is-favorite' : ''}" title="${favTitle}" data-id="${server.id}">
           <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-star"></i>
         </button>
-        <button type="button" class="btn-icon edit-btn" title="Bearbeiten" data-id="${server.id}">
+        <button type="button" class="btn-icon edit-btn" title="${editTitle}" data-id="${server.id}">
           <i class="fa-solid fa-pen"></i>
         </button>
-        <button type="button" class="btn-icon delete-btn" title="Löschen" data-id="${server.id}">
+        <button type="button" class="btn-icon delete-btn" title="${deleteTitle}" data-id="${server.id}">
           <i class="fa-solid fa-trash-can"></i>
         </button>
       </div>
@@ -463,9 +818,9 @@ document.addEventListener('DOMContentLoaded', () => {
       tilesGrid.innerHTML = `
         <div class="empty-state">
           <i class="fa-solid fa-server-slash"></i>
-          <p>Noch keine Server eingerichtet.</p>
+          <p>${translate('empty_servers_text')}</p>
           <button class="btn btn-primary" id="btn-add-first-server">
-            <i class="fa-solid fa-plus"></i> Ersten Server hinzufügen
+            <i class="fa-solid fa-plus"></i> ${translate('btn_add_first_server')}
           </button>
         </div>
       `;
@@ -487,7 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const favHeader = document.createElement('div');
       favHeader.className = 'favorites-header';
-      favHeader.innerHTML = `<i class="fa-solid fa-star"></i> Favoriten`;
+      favHeader.innerHTML = `<i class="fa-solid fa-star"></i> ${translate('favorites_title')}`;
       favSection.appendChild(favHeader);
 
       const favGrid = document.createElement('div');
@@ -508,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
       grouped[cat.name] = [];
     });
     
-    const fallbackCategoryName = 'Sonstige';
+    const fallbackCategoryName = translate('fallback_category');
     grouped[fallbackCategoryName] = [];
 
     servers.forEach(server => {
@@ -599,9 +954,9 @@ document.addEventListener('DOMContentLoaded', () => {
       tilesGrid.innerHTML = `
         <div class="empty-state">
           <i class="fa-solid fa-triangle-exclamation" style="color: var(--color-offline);"></i>
-          <p>Verbindung zum Server-Backend fehlgeschlagen.</p>
+          <p>${translate('alert_backend_connection_failed')}</p>
           <button class="btn btn-secondary" onclick="window.location.reload()">
-            <i class="fa-solid fa-arrows-rotate"></i> Erneut versuchen
+            <i class="fa-solid fa-arrows-rotate"></i> ${translate('btn_retry')}
           </button>
         </div>
       `;
@@ -611,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function triggerStatusCheck() {
     btnRefresh.disabled = true;
     const originalContent = btnRefresh.innerHTML;
-    btnRefresh.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Prüfe...`;
+    btnRefresh.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${translate('status_checking')}`;
     
     // Status in der UI temporär auf 'checking' setzen
     servers = servers.map(s => ({ ...s, status: 'checking' }));
@@ -633,7 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function deleteServerHandler(id, name) {
-    if (confirm(`Möchtest du den Server "${name}" wirklich löschen?`)) {
+    if (confirm(translate('alert_delete_server', { name: name }))) {
       try {
         const response = await fetch(`/api/servers/${id}`, { method: 'DELETE' });
         if (!response.ok) throw new Error('Löschen fehlgeschlagen');
@@ -641,7 +996,7 @@ document.addEventListener('DOMContentLoaded', () => {
         servers = servers.filter(s => s.id !== id);
         renderServersList();
       } catch (error) {
-        alert('Fehler beim Löschen des Servers.');
+        alert(translate('alert_delete_server_error'));
         console.error(error);
       }
     }
@@ -675,7 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Rollback bei Fehler
       server.favorite = !updatedFavorite;
       renderServersList();
-      alert('Fehler beim Speichern des Favoriten-Status.');
+      alert(translate('alert_save_favorite_error'));
     }
   }
 
@@ -684,7 +1039,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // 5. Dialog / Modal Management
   // ==========================================================================
   function openDialog() {
-    dialogTitle.textContent = 'Server hinzufügen';
+    dialogTitle.setAttribute('data-i18n', 'dialog_add_title');
+    applyLanguage(currentLang);
     serverForm.reset();
     inputId.value = '';
     
@@ -695,7 +1051,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const server = servers.find(s => s.id === id);
     if (!server) return;
 
-    dialogTitle.textContent = 'Server bearbeiten';
+    dialogTitle.setAttribute('data-i18n', 'dialog_edit_title');
+    applyLanguage(currentLang);
     inputId.value = server.id;
     inputName.value = server.name;
     inputUrl.value = server.url;
@@ -745,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderServersList();
       closeDialog();
     } catch (error) {
-      alert('Fehler beim Speichern des Servers.');
+      alert(translate('alert_save_server_error'));
       console.error(error);
     }
   });
@@ -756,7 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function openScanDialog() {
     scanDialog.showModal();
     // Zurücksetzen auf Standard-Ansicht
-    scanStatusText.textContent = 'Scan bereit. Klicke auf "Scan starten".';
+    scanStatusText.textContent = translate('scan_status_ready');
     scanProgressBar.className = 'progress-bar-fill';
     scanProgressBar.style.width = '0%';
     scanProgressContainer.style.display = 'none';
@@ -765,11 +1122,11 @@ document.addEventListener('DOMContentLoaded', () => {
     scanResultsArea.innerHTML = `
       <div class="scan-info-text">
         <i class="fa-solid fa-circle-info" style="font-size: 2rem; color: var(--color-accent); margin-bottom: 0.75rem;"></i>
-        <p>Es wird dein lokales IP-Subnetz nach typischen Homeserver-Webdiensten (Home Assistant, Plex, Synology, Proxmox etc. sowie Docker-Containern) gescannt.</p>
+        <p>${translate('scan_info_desc')}</p>
       </div>
     `;
     btnStartScan.disabled = false;
-    btnStartScan.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> Scan starten`;
+    btnStartScan.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> ${translate('btn_start_scan')}`;
   }
 
   function closeScanDialog() {
@@ -778,8 +1135,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function startNetworkScan() {
     btnStartScan.disabled = true;
-    btnStartScan.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Scanne...`;
-    scanStatusText.textContent = 'Suche nach aktiven Geräten und Diensten... Bitte warten (ca. 5-10 Sekunden).';
+    btnStartScan.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${translate('btn_start_scan_loading')}`;
+    scanStatusText.textContent = translate('scan_status_scanning');
     
     // Fortschrittsbalken vorbereiten und Animation starten
     scanProgressContainer.style.display = 'block';
@@ -790,7 +1147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scanResultsArea.innerHTML = `
       <div class="scan-info-text">
         <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2.5rem; color: var(--color-primary); margin-bottom: 0.75rem;"></i>
-        <p>Subnetz wird gescannt. Ports werden geprüft...</p>
+        <p>${translate('scan_info_scanning')}</p>
       </div>
     `;
 
@@ -804,22 +1161,22 @@ document.addEventListener('DOMContentLoaded', () => {
       scanProgressBar.className = 'progress-bar-fill';
       scanProgressBar.style.width = '100%';
       
-      scanStatusText.textContent = `Scan abgeschlossen! Subnetz ${data.subnet}.x durchsucht. ${data.services.length} Dienst(e)/Container gefunden.`;
+      scanStatusText.textContent = translate('scan_status_finished', { subnet: data.subnet, count: data.services.length });
       renderScanResults(data.services);
     } catch (error) {
       console.error(error);
       scanProgressBar.className = 'progress-bar-fill';
       scanProgressBar.style.width = '0%';
-      scanStatusText.textContent = 'Fehler beim Scannen des Netzwerks.';
+      scanStatusText.textContent = translate('scan_status_error');
       scanResultsArea.innerHTML = `
         <div class="scan-info-text">
           <i class="fa-solid fa-triangle-exclamation" style="font-size: 2.5rem; color: var(--color-offline); margin-bottom: 0.75rem;"></i>
-          <p>Der Scan konnte nicht durchgeführt werden. Stelle sicher, dass der Node-Server lokal ausgeführt wird.</p>
+          <p>${translate('scan_status_error')}</p>
         </div>
       `;
     } finally {
       btnStartScan.disabled = false;
-      btnStartScan.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> Erneut scannen`;
+      btnStartScan.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> ${translate('btn_start_scan_again')}`;
     }
   }
 
@@ -836,8 +1193,8 @@ document.addEventListener('DOMContentLoaded', () => {
       scanResultsArea.innerHTML = `
         <div class="scan-info-text">
           <i class="fa-solid fa-magnifying-glass" style="font-size: 2rem; color: var(--text-dimmed); margin-bottom: 0.75rem;"></i>
-          <p>Keine aktiven Webdienste gefunden.</p>
-          <span style="font-size: 0.8rem; color: var(--text-dimmed);">Gescannte Ports: 80, 443, 8080, 8123 (Home Assistant), 32400 (Plex), 8006 (Proxmox), 9000 (Portainer), 5001 (Synology), 2375 (Docker)</span>
+          <p>${translate('scan_no_services')}</p>
+          <span style="font-size: 0.8rem; color: var(--text-dimmed);">${translate('scan_no_services_help')}</span>
         </div>
       `;
       return;
@@ -907,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnImportSelected.disabled = true;
     const originalContent = btnImportSelected.innerHTML;
-    btnImportSelected.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Hinzufügen...`;
+    btnImportSelected.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${translate('btn_import_selected_loading')}`;
 
     try {
       const response = await fetch('/api/servers/batch', {
@@ -927,7 +1284,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await fetchServers();
       closeScanDialog();
     } catch (error) {
-      alert('Fehler beim Importieren der ausgewählten Server.');
+      alert(translate('alert_save_server_error'));
       console.error(error);
       btnImportSelected.disabled = false;
       btnImportSelected.innerHTML = originalContent;
@@ -972,6 +1329,15 @@ document.addEventListener('DOMContentLoaded', () => {
   btnCloseSettingsDialog.addEventListener('click', closeSettingsDialog);
   btnCancelSettings.addEventListener('click', closeSettingsDialog);
 
+  // Sprachauswahl-Events registrieren
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lang = btn.getAttribute('data-lang');
+      applyLanguage(lang);
+      renderServersList();
+    });
+  });
+
   // Tab-Events registrieren
   tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -985,13 +1351,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatId = telegramChatId.value.trim();
 
     if (!token || !chatId) {
-      alert('Bitte gib zuerst Bot-Token und Chat-ID ein!');
+      alert(translate('alert_telegram_test_empty'));
       return;
     }
 
     btnTestTelegram.disabled = true;
     const originalText = btnTestTelegram.innerHTML;
-    btnTestTelegram.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sende Test...`;
+    btnTestTelegram.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${translate('telegram_testing_btn')}`;
 
     try {
       const response = await fetch('/api/telegram/test', {
@@ -1002,12 +1368,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const result = await response.json();
       if (response.ok && result.success) {
-        alert('Erfolg! Testnachricht gesendet. Bitte prüfe Telegram auf deinem Handy.');
+        alert(translate('alert_telegram_test_success'));
       } else {
-        alert(`Fehler: ${result.error || 'Unbekannter Fehler'}`);
+        alert(translate('alert_telegram_test_error', { error: result.error || 'Unknown error' }));
       }
     } catch (err) {
-      alert('Testnachricht fehlgeschlagen. Netzwerkfehler.');
+      alert(translate('alert_telegram_test_network_error'));
       console.error(err);
     } finally {
       btnTestTelegram.disabled = false;
@@ -1109,10 +1475,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="text" class="category-edit-input" id="edit-cat-name-${index}" value="${escapeHTML(cat.name)}" required autocomplete="off">
             <select class="category-edit-select" id="edit-cat-icon-${index}"></select>
             <div class="category-edit-actions">
-              <button type="submit" class="btn-icon save-btn-cat" title="Speichern" style="color: var(--color-online);">
+              <button type="submit" class="btn-icon save-btn-cat" title="${translate('btn_save')}" style="color: var(--color-online);">
                 <i class="fa-solid fa-check"></i>
               </button>
-              <button type="button" class="btn-icon cancel-btn-cat" title="Abbrechen" style="color: var(--text-dimmed);">
+              <button type="button" class="btn-icon cancel-btn-cat" title="${translate('btn_cancel')}" style="color: var(--text-dimmed);">
                 <i class="fa-solid fa-xmark"></i>
               </button>
             </div>
@@ -1128,13 +1494,13 @@ document.addEventListener('DOMContentLoaded', () => {
           const newIcon = document.getElementById(`edit-cat-icon-${index}`).value;
           
           if (newName === '') {
-            alert('Name darf nicht leer sein!');
+            alert(translate('alert_cat_name_empty'));
             return;
           }
 
           const nameExists = localCategoriesCopy.some((c, idx) => idx !== index && c.name.toLowerCase() === newName.toLowerCase());
           if (nameExists) {
-            alert('Eine andere Kategorie mit diesem Namen existiert bereits!');
+            alert(translate('alert_cat_exists'));
             return;
           }
           
@@ -1159,10 +1525,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="category-settings-name">${escapeHTML(cat.name)}</span>
           </div>
           <div class="category-settings-actions">
-            <button type="button" class="btn-icon edit-btn-cat" title="Bearbeiten" data-index="${index}">
+            <button type="button" class="btn-icon edit-btn-cat" title="${translate('tooltip_edit')}" data-index="${index}">
               <i class="fa-solid fa-pen"></i>
             </button>
-            <button type="button" class="btn-icon delete-btn-cat" title="Löschen" data-index="${index}">
+            <button type="button" class="btn-icon delete-btn-cat" title="${translate('tooltip_delete')}" data-index="${index}">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
@@ -1174,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         row.querySelector('.delete-btn-cat').addEventListener('click', () => {
-          if (confirm(`Möchtest du die Kategorie "${cat.name}" wirklich löschen?`)) {
+          if (confirm(translate('alert_cat_delete_confirm', { name: cat.name }))) {
             localCategoriesCopy.splice(index, 1);
             if (editingCategoryIndex === index) {
               editingCategoryIndex = null;
@@ -1197,7 +1563,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const icon = newCatIconInput.value.trim() || 'fa-server';
 
     if (localCategoriesCopy.some(c => c.name.toLowerCase() === name.toLowerCase())) {
-      alert('Eine Kategorie mit diesem Namen existiert bereits!');
+      alert(translate('alert_cat_exists'));
       return;
     }
 
@@ -1215,7 +1581,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btnSaveSettings.addEventListener('click', async () => {
     btnSaveSettings.disabled = true;
     const originalContent = btnSaveSettings.innerHTML;
-    btnSaveSettings.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Speichert...`;
+    btnSaveSettings.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${translate('btn_saving')}`;
 
     try {
       // 1. Kategorien speichern
@@ -1251,7 +1617,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderServersList();
       closeSettingsDialog();
     } catch (error) {
-      alert('Fehler beim Speichern der Einstellungen: ' + error.message);
+      alert(translate('alert_save_settings_error', { error: error.message }));
       console.error(error);
     } finally {
       btnSaveSettings.disabled = false;
@@ -1290,6 +1656,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. Initialisierung
   // ==========================================================================
   async function init() {
+    applyLanguage(currentLang); // Sprachsteuerung anwenden
     populateIconSelect(newCatIconInput); // Befülle das Dropdown in den Einstellungen
     await fetchCategories(); // Zuerst Kategorien laden (wichtig für Formular und Kachelgruppierung)
     await fetchServers();    // Dann Server laden
