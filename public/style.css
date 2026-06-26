@@ -242,8 +242,7 @@ body {
   .lang-selector {
     position: absolute;
     right: 1.5rem;
-    top: 50%;
-    transform: translateY(-50%);
+    bottom: 1.5rem;
   }
 }
 
