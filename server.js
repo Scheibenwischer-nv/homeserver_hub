@@ -340,13 +340,56 @@ async function fetchDockerContainers(ip) {
   }
 }
 
+const DEFAULT_SERVERS = [
+  {
+    id: "demo-google",
+    name: "Google Search",
+    url: "https://www.google.com",
+    category: "General",
+    status: "checking",
+    latency: null,
+    lastChecked: null,
+    favorite: true
+  },
+  {
+    id: "demo-cloudflare",
+    name: "Cloudflare DNS",
+    url: "https://1.1.1.1",
+    category: "Network",
+    status: "checking",
+    latency: null,
+    lastChecked: null,
+    favorite: false
+  },
+  {
+    id: "demo-github",
+    name: "GitHub Portal",
+    url: "https://github.com",
+    category: "Development",
+    status: "checking",
+    latency: null,
+    lastChecked: null,
+    favorite: false
+  }
+];
+
 // Helper: Read servers from file
 async function readServers() {
   try {
     const data = await fs.readFile(CONFI_FILE, 'utf-8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Fehler beim Lesen der servers.json:', error);
+    if (error.code === 'ENOENT') {
+      console.log('[Init] servers.json nicht gefunden. Erstelle Demo-Server...');
+      try {
+        await writeServers(DEFAULT_SERVERS);
+        return DEFAULT_SERVERS;
+      } catch (writeErr) {
+        console.error('Fehler beim Schreiben der Standard-Server:', writeErr);
+      }
+    } else {
+      console.error('Fehler beim Lesen der servers.json:', error);
+    }
     return [];
   }
 }
