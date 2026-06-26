@@ -326,7 +326,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function createServerCard(server) {
     const card = document.createElement('a');
     card.className = `server-card status-${server.status}`;
-    card.href = server.url;
+    
+    // Protokoll-Check für den Link, falls in alten Daten kein http/https definiert war
+    let cardUrl = server.url || '';
+    if (cardUrl && !/^https?:\/\//i.test(cardUrl.trim())) {
+      cardUrl = `http://${cardUrl.trim()}`;
+    }
+    card.href = cardUrl;
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
     
