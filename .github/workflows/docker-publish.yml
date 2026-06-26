@@ -26,6 +26,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Konvertiert den Repository-Namen (z. B. Scheibenwischer-nv/homeserver_hub) in Kleinbuchstaben für die Registry
+      - name: Lowercase registry image name
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
       # QEMU wird benötigt, um ARM64 Images auf x86/amd64 Runnern zu bauen
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -51,6 +56,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=ref,event=branch
+            type=ref,event=tag
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
 
       # Baut und pusht das Image für Intel/AMD und ARM (Raspberry Pi etc.)
