@@ -591,7 +591,8 @@ app.post('/api/categories', async (req, res) => {
   const validated = categories.map((cat, index) => ({
     id: cat.id || `cat-${Date.now()}-${index}`,
     name: cat.name ? cat.name.trim() : 'Unbenannt',
-    icon: cat.icon ? cat.icon.trim() : 'fa-server'
+    icon: cat.icon ? cat.icon.trim() : 'fa-server',
+    color: cat.color ? cat.color.trim() : '#a78bfa'
   }));
 
   await writeCategories(validated);

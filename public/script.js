@@ -149,7 +149,25 @@ const TRANSLATIONS = {
     icon_music: "Musik / Audio (Note)",
     icon_docs: "Dokumente / Wiki (Buch)",
     icon_mail: "E-Mail / Kommunikation (Brief)",
-    icon_downloads: "Downloads (Download-Pfeil)"
+    icon_downloads: "Downloads (Download-Pfeil)",
+    
+    // Google Material Icons (DE)
+    icon_google_home: "Material: Startseite (Home)",
+    icon_google_dns: "Material: DNS / Server",
+    icon_google_router: "Material: Router / Netzwerk",
+    icon_google_settings: "Material: Einstellungen",
+    icon_google_folder: "Material: Ordner",
+    icon_google_storage: "Material: NAS / Festplatte",
+    icon_google_dev_board: "Material: Raspberry Pi / Board",
+    icon_google_tools: "Material: Werkzeuge",
+    icon_google_security: "Material: Sicherheit / Shield",
+    icon_google_terminal: "Material: Terminal / CLI",
+    icon_google_monitoring: "Material: Überwachung / Analytics",
+    icon_google_audio: "Material: Audio / Lautsprecher",
+    icon_google_docs: "Material: Dokumente / Wiki",
+    icon_google_mail: "Material: E-Mail / Post",
+    icon_google_downloads: "Material: Downloads",
+    icon_google_gaming: "Material: Gaming / Konsole"
   },
   en: {
     // Header & Stats
@@ -297,7 +315,25 @@ const TRANSLATIONS = {
     icon_music: "Music / Audio (Note)",
     icon_docs: "Documents / Wiki (Book)",
     icon_mail: "Email / Communication (Letter)",
-    icon_downloads: "Downloads (Download Arrow)"
+    icon_downloads: "Downloads (Download Arrow)",
+    
+    // Google Material Icons (EN)
+    icon_google_home: "Material: Home",
+    icon_google_dns: "Material: DNS / Server",
+    icon_google_router: "Material: Router / Network",
+    icon_google_settings: "Material: Settings",
+    icon_google_folder: "Material: Folder",
+    icon_google_storage: "Material: NAS / Storage",
+    icon_google_dev_board: "Material: Board / Raspberry Pi",
+    icon_google_tools: "Material: Tools",
+    icon_google_security: "Material: Security / Shield",
+    icon_google_terminal: "Material: Terminal / CLI",
+    icon_google_monitoring: "Material: Monitoring / Analytics",
+    icon_google_audio: "Material: Audio / Speaker",
+    icon_google_docs: "Material: Documents / Wiki",
+    icon_google_mail: "Material: Email",
+    icon_google_downloads: "Material: Downloads",
+    icon_google_gaming: "Material: Gaming / Console"
   }
 };
 
@@ -354,6 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const categoriesListArea = document.getElementById('categories-list-area');
   const newCatNameInput = document.getElementById('new-cat-name');
   const newCatIconInput = document.getElementById('new-cat-icon');
+  const newCatColorInput = document.getElementById('new-cat-color');
   const telegramEnabled = document.getElementById('telegram-enabled');
   const telegramToken = document.getElementById('telegram-token');
   const telegramChatId = document.getElementById('telegram-chatid');
@@ -388,7 +425,25 @@ document.addEventListener('DOMContentLoaded', () => {
     { class: 'fa-music', key: 'icon_music' },
     { class: 'fa-book-open', key: 'icon_docs' },
     { class: 'fa-envelope', key: 'icon_mail' },
-    { class: 'fa-download', key: 'icon_downloads' }
+    { class: 'fa-download', key: 'icon_downloads' },
+    
+    // Google Material Icons (isMaterial flags used to distinguish)
+    { class: 'home', key: 'icon_google_home' },
+    { class: 'dns', key: 'icon_google_dns' },
+    { class: 'router', key: 'icon_google_router' },
+    { class: 'settings', key: 'icon_google_settings' },
+    { class: 'folder', key: 'icon_google_folder' },
+    { class: 'storage', key: 'icon_google_storage' },
+    { class: 'developer_board', key: 'icon_google_dev_board' },
+    { class: 'build', key: 'icon_google_tools' },
+    { class: 'shield', key: 'icon_google_security' },
+    { class: 'terminal', key: 'icon_google_terminal' },
+    { class: 'monitoring', key: 'icon_google_monitoring' },
+    { class: 'volume_up', key: 'icon_google_audio' },
+    { class: 'description', key: 'icon_google_docs' },
+    { class: 'email', key: 'icon_google_mail' },
+    { class: 'download', key: 'icon_google_downloads' },
+    { class: 'videogame_asset', key: 'icon_google_gaming' }
   ];
 
   // Language (i18n) setup
@@ -589,6 +644,23 @@ document.addEventListener('DOMContentLoaded', () => {
     return cat ? cat.icon : 'fa-folder';
   }
 
+  function getCategoryColor(categoryName) {
+    const cat = categories.find(c => c.name === categoryName);
+    return cat && cat.color ? cat.color : '#a78bfa';
+  }
+
+  function renderIconHTML(iconClass, customStyle = '') {
+    if (!iconClass) return '';
+    if (iconClass.startsWith('fa-') || iconClass.startsWith('fab ') || iconClass.startsWith('fas ') || iconClass.startsWith('far ')) {
+      // FontAwesome
+      const prefix = iconClass.includes('fa-') && !iconClass.startsWith('fa-') ? '' : 'fa-solid';
+      return `<i class="${prefix} ${iconClass}" style="${customStyle}"></i>`;
+    } else {
+      // Google Material Icon
+      return `<span class="material-icons" style="${customStyle}; font-size: 1.1em; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;">${iconClass}</span>`;
+    }
+  }
+
   // Intelligente Logo-Erkennung für Homeserver-Dienste
   function getNamedLogoUrl(server) {
     const nameLower = server.name.toLowerCase();
@@ -704,6 +776,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusBadgeClass = server.status === 'online' ? 'status-online-badge' : (server.status === 'checking' ? 'status-checking-badge' : 'status-offline-badge');
     
     const categoryIcon = getCategoryIcon(server.category);
+    const categoryColor = getCategoryColor(server.category);
+    const iconHTML = renderIconHTML(categoryIcon, `color: ${categoryColor}; font-size: 1rem;`);
     
     // Logo HTML ermitteln
     const primaryLogo = server.favicon;
@@ -761,8 +835,8 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
 
       <div class="card-header">
-        <span class="category-badge">
-          <i class="fa-solid ${categoryIcon}"></i> ${server.category}
+        <span class="category-badge" style="border-color: ${categoryColor}33; background: ${categoryColor}0d;">
+          ${iconHTML} <span style="margin-left: 4px; color: ${categoryColor}; font-weight: 600;">${server.category}</span>
         </span>
         <span class="status-badge ${statusBadgeClass}">
           <span class="indicator-dot ${server.status}-dot"></span> ${statusText}
@@ -894,10 +968,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Titel
       const sectionTitle = document.createElement('h2');
       sectionTitle.className = 'category-section-title';
+      const catColor = cat.color || '#a78bfa';
+      sectionTitle.style.borderBottom = `1px solid ${catColor}33`;
+      
+      const iconHTML = renderIconHTML(cat.icon, `color: ${catColor}; text-shadow: 0 0 10px ${catColor}80;`);
       sectionTitle.innerHTML = `
-        <i class="fa-solid ${cat.icon}"></i> 
-        ${cat.name}
-        <i class="fa-solid fa-chevron-down collapse-arrow"></i>
+        ${iconHTML} 
+        <span style="margin-left: 0.25rem;">${cat.name}</span>
+        <i class="fa-solid fa-chevron-down collapse-arrow" style="color: var(--text-dimmed);"></i>
       `;
       
       // Klick-Event für Auf-/Zuklappen
@@ -1471,10 +1549,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (index === editingCategoryIndex) {
         // Inline-Editor rendern
         row.innerHTML = `
-          <form class="category-edit-form">
-            <input type="text" class="category-edit-input" id="edit-cat-name-${index}" value="${escapeHTML(cat.name)}" required autocomplete="off">
-            <select class="category-edit-select" id="edit-cat-icon-${index}"></select>
-            <div class="category-edit-actions">
+          <form class="category-edit-form" style="display: flex; gap: 0.5rem; align-items: center; width: 100%; flex-wrap: wrap;">
+            <input type="text" class="category-edit-input" id="edit-cat-name-${index}" value="${escapeHTML(cat.name)}" required autocomplete="off" style="flex: 2; min-width: 120px;">
+            <select class="category-edit-select" id="edit-cat-icon-${index}" style="flex: 1.2; min-width: 100px;"></select>
+            <div class="color-picker-wrapper" style="display: inline-flex; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0 0.5rem; height: 38px; gap: 0.35rem;">
+              <i class="fa-solid fa-palette" style="color: var(--text-muted); font-size: 0.8rem;"></i>
+              <input type="color" id="edit-cat-color-${index}" value="${cat.color || '#a78bfa'}" style="border: none; background: none; width: 22px; height: 22px; cursor: pointer; padding: 0; outline: none;">
+            </div>
+            <div class="category-edit-actions" style="display: flex; gap: 0.35rem; margin-left: auto;">
               <button type="submit" class="btn-icon save-btn-cat" title="${translate('btn_save')}" style="color: var(--color-online);">
                 <i class="fa-solid fa-check"></i>
               </button>
@@ -1492,6 +1574,7 @@ document.addEventListener('DOMContentLoaded', () => {
           e.preventDefault();
           const newName = document.getElementById(`edit-cat-name-${index}`).value.trim();
           const newIcon = document.getElementById(`edit-cat-icon-${index}`).value;
+          const newColor = document.getElementById(`edit-cat-color-${index}`).value;
           
           if (newName === '') {
             alert(translate('alert_cat_name_empty'));
@@ -1506,6 +1589,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           localCategoriesCopy[index].name = newName;
           localCategoriesCopy[index].icon = newIcon;
+          localCategoriesCopy[index].color = newColor;
           editingCategoryIndex = null;
           renderSettingsCategories();
         });
@@ -1517,12 +1601,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
       } else {
         // Normale Zeile rendern
+        const catColor = cat.color || '#a78bfa';
+        const iconHTML = renderIconHTML(cat.icon, `color: ${catColor};`);
         row.innerHTML = `
           <div class="category-settings-info">
-            <div class="category-settings-icon-preview">
-              <i class="fa-solid ${cat.icon}"></i>
+            <div class="category-settings-icon-preview" style="background: ${catColor}1a; border: 1px solid ${catColor}33;">
+              ${iconHTML}
             </div>
             <span class="category-settings-name">${escapeHTML(cat.name)}</span>
+            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${catColor}; border: 1px solid rgba(255,255,255,0.2); margin-left: 0.5rem;" title="${catColor}"></span>
           </div>
           <div class="category-settings-actions">
             <button type="button" class="btn-icon edit-btn-cat" title="${translate('tooltip_edit')}" data-index="${index}">
@@ -1561,6 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     const name = newCatNameInput.value.trim();
     const icon = newCatIconInput.value.trim() || 'fa-server';
+    const color = newCatColorInput.value || '#a78bfa';
 
     if (localCategoriesCopy.some(c => c.name.toLowerCase() === name.toLowerCase())) {
       alert(translate('alert_cat_exists'));
@@ -1570,7 +1658,8 @@ document.addEventListener('DOMContentLoaded', () => {
     localCategoriesCopy.push({
       id: `cat-${Date.now()}`,
       name,
-      icon
+      icon,
+      color
     });
 
     renderSettingsCategories();

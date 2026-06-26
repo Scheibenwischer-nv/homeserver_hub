@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- FontAwesome for high-quality dashboard icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
 </head>
@@ -170,16 +172,20 @@
           <!-- Formular zum Hinzufügen einer neuen Kategorie -->
           <form id="add-category-form" style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
             <h3 style="font-size: 0.85rem; margin-bottom: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="add_category_title">Kategorie hinzufügen</h3>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <div class="input-wrapper" style="flex: 2; min-width: 150px;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+              <div class="input-wrapper" style="flex: 2; min-width: 150px; margin-bottom: 0;">
                 <i class="fa-solid fa-folder input-icon"></i>
                 <input type="text" id="new-cat-name" placeholder="z. B. Smart Home" data-i18n-placeholder="placeholder_new_cat" required autocomplete="off">
               </div>
-              <div class="input-wrapper" style="flex: 1.2; min-width: 130px;">
+              <div class="input-wrapper" style="flex: 1.2; min-width: 130px; margin-bottom: 0;">
                 <i class="fa-solid fa-icons input-icon"></i>
                 <select id="new-cat-icon" required>
                   <!-- Wird dynamisch mit vordefinierten Icons befüllt -->
                 </select>
+              </div>
+              <div class="color-picker-wrapper" style="display: inline-flex; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0 0.75rem; height: 44px; gap: 0.5rem;">
+                <i class="fa-solid fa-palette" style="color: var(--text-muted); font-size: 0.9rem;"></i>
+                <input type="color" id="new-cat-color" value="#a78bfa" style="border: none; background: none; width: 28px; height: 28px; cursor: pointer; padding: 0; outline: none;">
               </div>
               <button type="submit" class="btn btn-primary" style="padding: 0 1.25rem; height: 44px; display: inline-flex; align-items: center; justify-content: center;">
                 <i class="fa-solid fa-plus"></i>
