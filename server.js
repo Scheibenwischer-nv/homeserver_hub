@@ -205,7 +205,7 @@ function extractFavicon(html, baseUrl) {
 
 // Hilfsfunktion: Dienstdetails via HTTP(S) abrufen
 async function getServiceDetails(ip, port) {
-  const protocol = port === 443 || port === 8006 ? 'https' : 'http';
+  const protocol = port === 443 || port === 8006 || port === 9443 ? 'https' : 'http';
   const url = `${protocol}://${ip}:${port}`;
   
   const controller = new AbortController();
@@ -236,7 +236,7 @@ async function getServiceDetails(ip, port) {
     } else if (/proxmox/i.test(title) || port === 8006) {
       title = title || 'Proxmox VE';
       category = 'Development';
-    } else if (/portainer/i.test(title) || port === 9000) {
+    } else if (/portainer/i.test(title) || port === 9000 || port === 9443) {
       title = title || 'Portainer';
       category = 'Development';
     } else if (/synology/i.test(title) || /dsm/i.test(title) || port === 5001) {
@@ -644,8 +644,8 @@ app.post('/api/scan', async (req, res) => {
   }
 
   console.log(`[Scan] Manueller Scan gestartet im Subnetz: ${subnet}.x`);
-  // Port 2375 (Docker API) zur Liste hinzugefügt
-  const PORTS_TO_SCAN = [80, 443, 8080, 8123, 32400, 8006, 9000, 5001, 2375];
+  // Port 2375 (Docker API) und 9443 (Portainer HTTPS) zur Liste hinzugefügt
+  const PORTS_TO_SCAN = [80, 443, 8080, 8123, 32400, 8006, 9000, 9443, 5001, 2375];
   const targets = [];
   
   for (let i = 1; i <= 254; i++) {
