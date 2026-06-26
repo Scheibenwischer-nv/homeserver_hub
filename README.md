@@ -3,7 +3,7 @@
 Ein elegantes, performantes und hochgradig ästhetisches Homeserver-Dashboard mit automatischem Live-Status-Monitor, integrierter Telegram-Ausfall-Benachrichtigung, intelligentem lokalem Netzwerkscan und flexibler Favoriten- und Kategorie-Verwaltung.
 
 ---
-![Dashboard Vorschau](images/screenshot1.png)
+![Dashboard Vorschau](images/Bildschirmfoto_1.png)
 ## Hauptfeatures 🚀
 
 - **Live-Statusprüfung**: Alle 30 Sekunden werden die eingetragenen Dienste im Hintergrund geprüft. Die Seite aktualisiert sich bei Statusänderungen vollautomatisch.
