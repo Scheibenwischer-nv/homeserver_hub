@@ -104,6 +104,21 @@ body {
   animation: float-animation 6s ease-in-out infinite;
 }
 
+.header-logo {
+  height: 90px;
+  width: 90px;
+  border-radius: 16px;
+  object-fit: cover;
+  animation: float-animation 6s ease-in-out infinite;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.header-logo:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.35);
+}
+
 .logo-area h1 {
   font-size: 1.8rem;
   font-weight: 800;
