@@ -568,11 +568,17 @@ app.post('/api/servers', async (req, res) => {
     return res.status(400).json({ error: 'Name und URL sind erforderlich.' });
   }
 
+  // URL bereinigen: Protokoll ergänzen, falls nicht vorhanden
+  let cleanUrl = url.trim();
+  if (!/^https?:\/\//i.test(cleanUrl)) {
+    cleanUrl = `http://${cleanUrl}`;
+  }
+
   const servers = await readServers();
   const newServer = {
     id: Date.now().toString(),
     name,
-    url,
+    url: cleanUrl,
     category: category || 'General',
     status: 'checking',
     latency: null,
@@ -602,7 +608,15 @@ app.put('/api/servers/:id', async (req, res) => {
 
   // Werte aktualisieren
   servers[serverIndex].name = name || servers[serverIndex].name;
-  servers[serverIndex].url = url || servers[serverIndex].url;
+  
+  if (url !== undefined) {
+    let cleanUrl = url.trim();
+    if (!/^https?:\/\//i.test(cleanUrl)) {
+      cleanUrl = `http://${cleanUrl}`;
+    }
+    servers[serverIndex].url = cleanUrl;
+  }
+
   servers[serverIndex].category = category || servers[serverIndex].category;
   if (req.body.favorite !== undefined) {
     servers[serverIndex].favorite = req.body.favorite;
