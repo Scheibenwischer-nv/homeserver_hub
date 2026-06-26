@@ -48,12 +48,6 @@
 
       <!-- Controls -->
       <div class="header-controls">
-        <!-- Sprachauswahl (Länderflaggen) -->
-        <div class="lang-selector">
-          <button type="button" class="lang-btn active" data-lang="de" title="Deutsch">🇩🇪</button>
-          <button type="button" class="lang-btn" data-lang="en" title="English">🇬🇧</button>
-        </div>
-        
         <button id="btn-scan" class="btn btn-secondary" title="Lokales Netzwerk nach Diensten durchsuchen" data-i18n-title="tooltip_scan">
           <i class="fa-solid fa-satellite-dish"></i> <span data-i18n="btn_scan">Netzwerk scannen</span>
         </button>
@@ -69,6 +63,12 @@
         <button id="btn-add-server" class="btn btn-primary">
           <i class="fa-solid fa-plus"></i> <span data-i18n="btn_add_server">Server hinzufügen</span>
         </button>
+        
+        <!-- Sprachauswahl (Länderflaggen) -->
+        <div class="lang-selector">
+          <button type="button" class="lang-btn active" data-lang="de" title="Deutsch">🇩🇪</button>
+          <button type="button" class="lang-btn" data-lang="en" title="English">🇬🇧</button>
+        </div>
       </div>
     </header>
 
@@ -83,7 +83,11 @@
     </main>
 
     <footer class="app-footer">
-      <p data-i18n="footer_text">Automatische Aktualisierung alle 30 Sekunden. Entworfen für deinen Homeserver.</p>
+      <p>
+        <span data-i18n="footer_text">Automatische Aktualisierung alle 30 Sekunden. Entworfen für deinen Homeserver.</span>
+        <span class="footer-separator">|</span>
+        <span>&copy; 2026 Scheibenwischer-nv</span>
+      </p>
     </footer>
   </div>
 

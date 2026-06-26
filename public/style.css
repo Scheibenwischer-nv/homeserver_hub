@@ -230,7 +230,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 3px;
-  margin-right: 0.25rem;
+  margin-left: 0.25rem;
 }
 
 .lang-btn {
@@ -709,6 +709,11 @@ dialog[open]::backdrop {
   font-size: 0.8rem;
   border-top: 1px solid rgba(255, 255, 255, 0.03);
   margin-top: auto;
+}
+
+.footer-separator {
+  margin: 0 0.5rem;
+  opacity: 0.3;
 }
 
 
