@@ -230,7 +230,27 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 3px;
-  margin-left: 0.25rem;
+  width: fit-content;
+}
+
+@media (min-width: 769px) {
+  .app-header {
+    position: relative;
+    padding-right: 7.5rem; /* Platz für die Länderauswahl am rechten Rand */
+  }
+  
+  .lang-selector {
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+
+@media (max-width: 768px) {
+  .lang-selector {
+    margin: 0.5rem auto 0 auto; /* Zentriert unter den Controls auf Mobilgeräten */
+  }
 }
 
 .lang-btn {
