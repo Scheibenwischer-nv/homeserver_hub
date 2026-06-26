@@ -14,7 +14,8 @@ Ein elegantes, performantes und hochgradig ästhetisches Homeserver-Dashboard mi
 - **Rich Aesthetics**: Moderner Waber-Hintergrund (HTML5 Canvas), Outfit-Schriftart, schwebende Kacheln im Glassmorphism-Stil und reaktionsschnelle Micro-Animations.
 
 ---
-
+![Dashboard Vorschau](images/Bildschirmfoto_2.png)
+![Dashboard Vorschau](images/Bildschirmfoto_3.png)
 ## 🐳 Installation & Start mit Docker (Empfohlen)
 
 Das Dashboard ist vollständig dockerisiert und unterstützt Multi-Architektur-Builds (`amd64` für normale PCs/Server und `arm64` für Raspberry Pi, Synology NAS etc.).
