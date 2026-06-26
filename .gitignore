@@ -1,0 +1,9 @@
+node_modules/
+*.log
+servers.json
+categories.json
+settings.json
+data/
+.agents/
+.gemini/
+.DS_Store

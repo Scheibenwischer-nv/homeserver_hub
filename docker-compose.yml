@@ -1,0 +1,17 @@
+services:
+  homeserver-hub:
+    container_name: homeserver-hub
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Falls das Image von GitHub Packages geladen werden soll (nach Veröffentlichung):
+    # image: ghcr.io/stefanotten/serverhome:latest
+    ports:
+      - "3005:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - DATA_DIR=/app/data
+      - PORT=3000
+    restart: unless-stopped

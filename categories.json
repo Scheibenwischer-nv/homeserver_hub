@@ -1,0 +1,37 @@
+[
+  {
+    "id": "cat-1",
+    "name": "Smart Home",
+    "icon": "fa-house-signal"
+  },
+  {
+    "id": "cat-2",
+    "name": "Media",
+    "icon": "fa-film"
+  },
+  {
+    "id": "cat-3",
+    "name": "Network",
+    "icon": "fa-network-wired"
+  },
+  {
+    "id": "cat-4",
+    "name": "Storage",
+    "icon": "fa-hard-drive"
+  },
+  {
+    "id": "cat-5",
+    "name": "Development",
+    "icon": "fa-code"
+  },
+  {
+    "id": "cat-6",
+    "name": "Other",
+    "icon": "fa-screwdriver-wrench"
+  },
+  {
+    "id": "cat-1782483689433",
+    "name": "Office",
+    "icon": "fa-envelope"
+  }
+]

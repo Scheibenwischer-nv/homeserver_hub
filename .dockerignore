@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.dockerignore
+.github
+.agents
+.gemini
+*.json
+!package.json
+!package-lock.json
