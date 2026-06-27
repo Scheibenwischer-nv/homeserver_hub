@@ -4,7 +4,7 @@ An elegant, high-performance, and visually stunning home server dashboard featur
 
 ---
 
-![Dashboard Preview](images/Bildschirmfoto_1.png)
+![Dashboard Preview](images/Bildschirmfoto_4.png)
 
 ## Key Features 🚀
 
@@ -15,8 +15,9 @@ An elegant, high-performance, and visually stunning home server dashboard featur
 - **Category Editor**: Create, edit (inline editor), and delete categories directly from the dashboard and choose from predefined icons.
 - **Rich Aesthetics**: Modern fluid canvas animation background (HTML5 Canvas), Outfit font, hovering glassmorphism tiles, and responsive micro-animations.
 
-![Dashboard Preview](images/Bildschirmfoto_2.png)
-![Dashboard Preview](images/Bildschirmfoto_3.png)
+![Dashboard Preview](images/Bildschirmfoto_5.png)
+![Dashboard Preview](images/Bildschirmfoto_6.png)
+![Dashboard Preview](images/Bildschirmfoto_7.png)
 
 ---
 
