@@ -42,7 +42,27 @@ services:
       - PORT=3000
     restart: unless-stopped
 ```
+or Portainer
+```yaml
+version: "3"
 
+services:
+  homeserver-hub:
+    container_name: homeserver-hub
+    image: ghcr.io/scheibenwischer-nv/homeserver_hub:v0.2
+    ports:
+      - "3005:3000"
+    volumes:
+      - homeserver-data:/app/data
+    environment:
+      - NODE_ENV=production
+      - DATA_DIR=/app/data
+      - PORT=3000
+    restart: unless-stopped
+
+volumes:
+  homeserver-data:
+```
 ### 2. Start the container
 Run the following command in the same directory:
 
