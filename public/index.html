@@ -134,6 +134,14 @@
           </div>
         </div>
 
+        <div class="form-group" style="margin-top: 0.5rem;">
+          <label class="custom-checkbox-container" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+            <input type="checkbox" id="server-ignore-updates" name="ignoreUpdates">
+            <span class="checkbox-checkmark"></span>
+            <span style="font-size: 0.9rem; color: var(--text-main);" data-i18n="label_ignore_updates">Von Update-Prüfung ausschließen (Nicht updaten)</span>
+          </label>
+        </div>
+
         <div class="dialog-footer">
           <button type="button" class="btn btn-secondary" id="btn-cancel-dialog" data-i18n="btn_cancel">Abbrechen</button>
           <button type="submit" class="btn btn-primary" id="btn-submit-dialog" data-i18n="btn_save">Speichern</button>
@@ -208,10 +216,16 @@
               Lass dich sofort per Telegram informieren, wenn ein überwachter Server offline geht.
             </p>
             
-            <label class="custom-checkbox-container" style="margin-bottom: 1.25rem; display: inline-flex;">
+            <label class="custom-checkbox-container" style="margin-bottom: 0.75rem; display: flex;">
               <input type="checkbox" id="telegram-enabled">
               <span class="checkbox-checkmark"></span>
               <span class="checkbox-label" style="font-weight: 600;" data-i18n="telegram_enable_label">Ausfall-Benachrichtigungen aktivieren</span>
+            </label>
+
+            <label class="custom-checkbox-container" style="margin-bottom: 1.25rem; display: flex;">
+              <input type="checkbox" id="telegram-weekly-updates" checked>
+              <span class="checkbox-checkmark"></span>
+              <span class="checkbox-label" style="font-weight: 600;" data-i18n="telegram_weekly_updates_label">Wöchentlichen Server-Update-Bericht senden (GitHub Releases)</span>
             </label>
 
             <div class="form-group" style="margin-bottom: 1rem;">
@@ -230,9 +244,14 @@
               </div>
             </div>
 
-            <button type="button" id="btn-test-telegram" class="btn btn-secondary" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;">
-              <i class="fa-solid fa-paper-plane"></i> <span data-i18n="telegram_test_btn">Verbindung testen</span>
-            </button>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button type="button" id="btn-test-telegram" class="btn btn-secondary" style="flex: 1; min-width: 180px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <i class="fa-solid fa-paper-plane"></i> <span data-i18n="telegram_test_btn">Verbindung testen</span>
+              </button>
+              <button type="button" id="btn-check-updates" class="btn btn-secondary" style="flex: 1; min-width: 180px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="telegram_check_updates_btn">Updates jetzt prüfen</span>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -46,6 +46,7 @@ const TRANSLATIONS = {
     placeholder_server_url: "z. B. http://192.168.1.100:32400",
     help_server_url: "Mit http:// oder https:// (z. B. https://plex.tv)",
     label_category: "Kategorie",
+    label_ignore_updates: "Von Update-Prüfung ausschließen (Nicht updaten)",
     btn_cancel: "Abbrechen",
     btn_save: "Speichern",
     
@@ -68,12 +69,18 @@ const TRANSLATIONS = {
     telegram_notifications_title: "Telegram Benachrichtigungen",
     telegram_notifications_desc: "Lass dich sofort per Telegram informieren, wenn ein überwachter Server offline geht.",
     telegram_enable_label: "Ausfall-Benachrichtigungen aktivieren",
+    telegram_weekly_updates_label: "Wöchentlichen Server-Update-Bericht senden (GitHub Releases)",
     telegram_token_label: "Telegram Bot-Token",
     placeholder_telegram_token: "z. B. 123456789:ABCdefGhIJK...",
     telegram_chatid_label: "Deine Chat-ID",
     placeholder_telegram_chatid: "z. B. 987654321",
     telegram_test_btn: "Verbindung testen",
     telegram_testing_btn: "Sende Test...",
+    telegram_check_updates_btn: "Updates jetzt prüfen",
+    telegram_checking_updates_btn: "Prüfe Releases...",
+    alert_updates_check_success: "Update-Prüfung abgeschlossen ({count} Dienste geprüft). Der Bericht wurde per Telegram gesendet!",
+    alert_updates_check_no_telegram: "Update-Prüfung abgeschlossen ({count} Dienste geprüft). Hinweis: Aktiviere Telegram, um den Bericht aufs Handy zu erhalten.",
+    alert_updates_check_error: "Fehler bei der Update-Prüfung.",
     
     // Settings - Help Tab
     help_intro: "Willkommen beim <strong>HomeServer Hub</strong>! Hier findest du eine einfache Schritt-für-Schritt-Anleitung, wie du deine Geräte verwaltest und Benachrichtigungen einrichtest.",
@@ -212,6 +219,7 @@ const TRANSLATIONS = {
     placeholder_server_url: "e.g. http://192.168.1.100:32400",
     help_server_url: "With http:// or https:// (e.g. https://plex.tv)",
     label_category: "Category",
+    label_ignore_updates: "Exclude from update checks (Do not update)",
     btn_cancel: "Cancel",
     btn_save: "Save",
     
@@ -234,12 +242,18 @@ const TRANSLATIONS = {
     telegram_notifications_title: "Telegram Notifications",
     telegram_notifications_desc: "Get notified immediately via Telegram if a monitored server goes offline.",
     telegram_enable_label: "Enable offline notifications",
+    telegram_weekly_updates_label: "Send weekly server update report (GitHub Releases)",
     telegram_token_label: "Telegram Bot Token",
     placeholder_telegram_token: "e.g. 123456789:ABCdefGhIJK...",
     telegram_chatid_label: "Your Chat ID",
     placeholder_telegram_chatid: "e.g. 987654321",
     telegram_test_btn: "Test Connection",
     telegram_testing_btn: "Sending Test...",
+    telegram_check_updates_btn: "Check Updates Now",
+    telegram_checking_updates_btn: "Checking Releases...",
+    alert_updates_check_success: "Update check completed ({count} services checked). The report was sent via Telegram!",
+    alert_updates_check_no_telegram: "Update check completed ({count} services checked). Note: Enable Telegram to receive the report on your phone.",
+    alert_updates_check_error: "Error checking for updates.",
     
     // Settings - Help Tab
     help_intro: "Welcome to the <strong>HomeServer Hub</strong>! Here you will find a simple step-by-step guide on how to manage your devices and set up notifications.",
@@ -361,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputName = document.getElementById('server-name');
   const inputUrl = document.getElementById('server-url');
   const inputCategory = document.getElementById('server-category');
+  const inputIgnoreUpdates = document.getElementById('server-ignore-updates');
 
   // Scanner DOM Elements
   const btnScan = document.getElementById('btn-scan');
@@ -392,9 +407,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const newCatIconInput = document.getElementById('new-cat-icon');
   const newCatColorInput = document.getElementById('new-cat-color');
   const telegramEnabled = document.getElementById('telegram-enabled');
+  const telegramWeeklyUpdates = document.getElementById('telegram-weekly-updates');
   const telegramToken = document.getElementById('telegram-token');
   const telegramChatId = document.getElementById('telegram-chatid');
   const btnTestTelegram = document.getElementById('btn-test-telegram');
+  const btnCheckUpdates = document.getElementById('btn-check-updates');
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabContents = document.querySelectorAll('.tab-content');
 
@@ -1121,6 +1138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applyLanguage(currentLang);
     serverForm.reset();
     inputId.value = '';
+    if (inputIgnoreUpdates) inputIgnoreUpdates.checked = false;
     
     serverDialog.showModal();
   }
@@ -1135,6 +1153,9 @@ document.addEventListener('DOMContentLoaded', () => {
     inputName.value = server.name;
     inputUrl.value = server.url;
     inputCategory.value = server.category;
+    if (inputIgnoreUpdates) {
+      inputIgnoreUpdates.checked = !!server.ignoreUpdates || /paperless/i.test(server.name || '');
+    }
 
     serverDialog.showModal();
   }
@@ -1151,7 +1172,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const serverData = {
       name: inputName.value.trim(),
       url: inputUrl.value.trim(),
-      category: inputCategory.value
+      category: inputCategory.value,
+      ignoreUpdates: inputIgnoreUpdates ? inputIgnoreUpdates.checked : false
     };
 
     const isEdit = id && id !== '';
@@ -1459,6 +1481,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Manuellen Update-Check & Bericht auslösen
+  if (btnCheckUpdates) {
+    btnCheckUpdates.addEventListener('click', async () => {
+      const originalHtml = btnCheckUpdates.innerHTML;
+      btnCheckUpdates.disabled = true;
+      btnCheckUpdates.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${translate('telegram_checking_updates_btn')}`;
+
+      try {
+        const response = await fetch('/api/servers/check-updates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          if (data.telegramSent) {
+            alert(translate('alert_updates_check_success', { count: data.checkedCount || 0 }));
+          } else {
+            alert(translate('alert_updates_check_no_telegram', { count: data.checkedCount || 0 }));
+          }
+        } else {
+          alert(translate('alert_updates_check_error'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert(translate('alert_updates_check_error'));
+      } finally {
+        btnCheckUpdates.disabled = false;
+        btnCheckUpdates.innerHTML = originalHtml;
+      }
+    });
+  }
+
   // Check-All Event-Listener registrieren
   chkSelectAll.addEventListener('change', () => {
     const isChecked = chkSelectAll.checked;
@@ -1500,6 +1554,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.ok) {
         const settings = await response.json();
         telegramEnabled.checked = !!settings.telegram?.enabled;
+        if (telegramWeeklyUpdates) {
+          telegramWeeklyUpdates.checked = settings.telegram?.weeklyUpdates !== false;
+        }
         telegramToken.value = settings.telegram?.botToken || '';
         telegramChatId.value = settings.telegram?.chatId || '';
       }
@@ -1695,6 +1752,7 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({
           telegram: {
             enabled: telegramEnabled.checked,
+            weeklyUpdates: telegramWeeklyUpdates ? telegramWeeklyUpdates.checked : true,
             botToken: telegramToken.value.trim(),
             chatId: telegramChatId.value.trim()
           }

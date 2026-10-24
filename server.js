@@ -39,6 +39,8 @@ async function readSettings() {
     const defaultSettings = {
       telegram: {
         enabled: false,
+        weeklyUpdates: true,
+        lastWeeklyUpdateCheck: null,
         botToken: '',
         chatId: ''
       }
@@ -518,6 +520,208 @@ async function checkAllServers() {
   return updatedServers;
 }
 
+// ==========================================================================
+// Wöchentliche Update-Prüfung (GitHub Releases)
+// ==========================================================================
+
+const KNOWN_GITHUB_REPOS = [
+  { keywords: ['home assistant', 'homeassistant', 'hass'], repo: 'home-assistant/core', label: 'Home Assistant' },
+  { keywords: ['stirling-pdf', 'stirling'], repo: 'Stirling-Tools/Stirling-PDF', label: 'Stirling-PDF' },
+  { keywords: ['n8n'], repo: 'n8n-io/n8n', label: 'n8n' },
+  { keywords: ['portainer'], repo: 'portainer/portainer', label: 'Portainer' },
+  { keywords: ['seafile'], repo: 'haiwen/seafile', label: 'Seafile' },
+  { keywords: ['openmediavault', 'omv'], repo: 'openmediavault/openmediavault', label: 'openmediavault' },
+  { keywords: ['open archiver', 'openarchiver'], repo: 'LogicLabs-OU/OpenArchiver', label: 'Open Archiver' },
+  { keywords: ['pi-hole', 'pihole'], repo: 'pi-hole/pi-hole', label: 'Pi-hole' },
+  { keywords: ['adguard'], repo: 'AdguardTeam/AdGuardHome', label: 'AdGuard Home' },
+  { keywords: ['nextcloud'], repo: 'nextcloud/server', label: 'Nextcloud' },
+  { keywords: ['jellyfin'], repo: 'jellyfin/jellyfin', label: 'Jellyfin' },
+  { keywords: ['plex'], repo: 'plexinc/pms-docker', label: 'Plex Media Server' },
+  { keywords: ['immich'], repo: 'immich-app/immich', label: 'Immich' },
+  { keywords: ['vaultwarden'], repo: 'dani-garcia/vaultwarden', label: 'Vaultwarden' },
+  { keywords: ['uptime kuma', 'uptime-kuma'], repo: 'louislam/uptime-kuma', label: 'Uptime Kuma' },
+  { keywords: ['traefik'], repo: 'traefik/traefik', label: 'Traefik' },
+  { keywords: ['nginx proxy manager'], repo: 'NginxProxyManager/nginx-proxy-manager', label: 'Nginx Proxy Manager' },
+  { keywords: ['grafana'], repo: 'grafana/grafana', label: 'Grafana' },
+  { keywords: ['prometheus'], repo: 'prometheus/prometheus', label: 'Prometheus' },
+  { keywords: ['gitea'], repo: 'go-gitea/gitea', label: 'Gitea' },
+  { keywords: ['syncthing'], repo: 'syncthing/syncthing', label: 'Syncthing' },
+  { keywords: ['node-red', 'nodered'], repo: 'node-red/node-red', label: 'Node-RED' },
+  { keywords: ['iobroker'], repo: 'ioBroker/ioBroker.js-controller', label: 'ioBroker' },
+  { keywords: ['mealie'], repo: 'mealie-recipes/mealie', label: 'Mealie' },
+  { keywords: ['bookstack'], repo: 'BookStackApp/BookStack', label: 'BookStack' },
+  { keywords: ['homepage'], repo: 'gethomepage/homepage', label: 'Homepage' }
+];
+
+function matchGithubRepo(serverName) {
+  const lower = (serverName || '').toLowerCase();
+  for (const entry of KNOWN_GITHUB_REPOS) {
+    if (entry.keywords.some(kw => lower.includes(kw))) {
+      return entry;
+    }
+  }
+  return null;
+}
+
+async function fetchLatestGithubRelease(repo) {
+  const headers = {
+    'User-Agent': 'HomeServer-Hub-UpdateChecker',
+    'Accept': 'application/vnd.github+json'
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+  try {
+    // 1. Versuche offizielles Latest-Release abzurufen
+    const relRes = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+      headers,
+      signal: controller.signal
+    });
+
+    if (relRes.ok) {
+      const data = await relRes.json();
+      if (data && data.tag_name) {
+        return {
+          version: data.tag_name,
+          url: data.html_url || `https://github.com/${repo}/releases`,
+          publishedAt: data.published_at || null
+        };
+      }
+    }
+
+    // 2. Fallback auf Tags (z. B. wenn das Projekt nur Git-Tags statt GitHub-Releases nutzt)
+    const tagRes = await fetch(`https://api.github.com/repos/${repo}/tags?per_page=1`, {
+      headers,
+      signal: controller.signal
+    });
+
+    if (tagRes.ok) {
+      const tags = await tagRes.json();
+      if (Array.isArray(tags) && tags.length > 0 && tags[0].name) {
+        return {
+          version: tags[0].name,
+          url: `https://github.com/${repo}/tags`,
+          publishedAt: null
+        };
+      }
+    }
+  } catch (error) {
+    console.warn(`[UpdateCheck] Konnte Release für ${repo} nicht abrufen:`, error.message);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  return null;
+}
+
+async function checkWeeklyServerUpdates(forceTelegramReport = false) {
+  console.log('[UpdateCheck] Starte Prüfung auf verfügbare Server-Updates...');
+  const servers = await readServers();
+  const settings = await readSettings();
+
+  const checkedRepos = new Map();
+  const results = [];
+  let newUpdatesCount = 0;
+
+  for (const server of servers) {
+    // Ausgeschlossene Server (z. B. Paperless oder manuell deaktivierte Dienste) überspringen
+    if (server.ignoreUpdates || /paperless/i.test(server.name || '')) {
+      continue;
+    }
+
+    const matched = matchGithubRepo(server.name);
+    if (!matched) continue;
+
+    let releaseInfo = checkedRepos.get(matched.repo);
+    if (releaseInfo === undefined) {
+      releaseInfo = await fetchLatestGithubRelease(matched.repo);
+      checkedRepos.set(matched.repo, releaseInfo);
+    }
+
+    if (releaseInfo) {
+      const previousVersion = server.lastKnownRelease || null;
+      const isNew = previousVersion !== null && previousVersion !== releaseInfo.version;
+      if (isNew) {
+        newUpdatesCount++;
+      }
+
+      server.lastKnownRelease = releaseInfo.version;
+      server.releaseUrl = releaseInfo.url;
+      server.lastUpdateCheck = new Date().toISOString();
+
+      results.push({
+        serverName: server.name,
+        repoLabel: matched.label,
+        version: releaseInfo.version,
+        previousVersion,
+        isNew,
+        url: releaseInfo.url
+      });
+    }
+  }
+
+  await writeServers(servers);
+
+  // Zeitstempel der letzten wöchentlichen Prüfung in settings.json sichern
+  if (!settings.telegram) {
+    settings.telegram = { enabled: false, weeklyUpdates: true, lastWeeklyUpdateCheck: null, botToken: '', chatId: '' };
+  }
+  settings.telegram.lastWeeklyUpdateCheck = new Date().toISOString();
+  await writeSettings(settings);
+
+  // Telegram-Bericht senden, falls aktiviert (oder manuell angefordert)
+  const canSendTelegram = settings.telegram.enabled && settings.telegram.botToken && settings.telegram.chatId;
+  const shouldSend = forceTelegramReport || (canSendTelegram && settings.telegram.weeklyUpdates !== false);
+
+  let telegramSent = false;
+  if (shouldSend && canSendTelegram && results.length > 0) {
+    const dateStr = new Date().toLocaleDateString('de-DE');
+    let message = `📦 *Wöchentlicher Update-Check (${dateStr})*\n`;
+    message += `Hier sind die aktuellsten verfügbaren Versionen deiner eingetragenen Server-Dienste:\n\n`;
+
+    for (const item of results) {
+      const badge = item.isNew ? '🆕 *NEUES UPDATE*' : '✅ Aktuellste Version';
+      message += `• *${item.serverName}*: \`${item.version}\` (${badge})\n  🔗 [Release Notes](${item.url})\n`;
+    }
+
+    if (newUpdatesCount > 0) {
+      message += `\n🚀 Es wurden *${newUpdatesCount}* neue Version(en) seit der letzten Prüfung veröffentlicht!`;
+    } else {
+      message += `\n✨ Alle überwachten Releases sind auf dem bekannten Stand.`;
+    }
+
+    telegramSent = await sendTelegramMessage(message);
+    console.log(`[UpdateCheck] Wöchentlicher Update-Bericht per Telegram gesendet: ${telegramSent}`);
+  }
+
+  console.log(`[UpdateCheck] Prüfung abgeschlossen (${results.length} Dienste geprüft, ${newUpdatesCount} neu).`);
+  return {
+    checkedCount: results.length,
+    newUpdatesCount,
+    telegramSent,
+    lastWeeklyUpdateCheck: settings.telegram.lastWeeklyUpdateCheck,
+    results
+  };
+}
+
+async function runScheduledWeeklyCheckIfNeeded() {
+  try {
+    const settings = await readSettings();
+    if (!settings.telegram || settings.telegram.weeklyUpdates === false) return;
+
+    const lastCheck = settings.telegram.lastWeeklyUpdateCheck
+      ? new Date(settings.telegram.lastWeeklyUpdateCheck).getTime()
+      : 0;
+    const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+    if (!lastCheck || (Date.now() - lastCheck) >= ONE_WEEK_MS) {
+      await checkWeeklyServerUpdates(false);
+    }
+  } catch (err) {
+    console.error('[UpdateCheck] Fehler beim geplanten wöchentlichen Check:', err);
+  }
+}
+
 // API: Einstellungen abrufen
 app.get('/api/settings', async (req, res) => {
   const settings = await readSettings();
@@ -531,9 +735,12 @@ app.post('/api/settings', async (req, res) => {
     return res.status(400).json({ error: 'Telegram-Einstellungen sind erforderlich.' });
   }
 
+  const currentSettings = await readSettings();
   const settings = {
     telegram: {
       enabled: !!telegram.enabled,
+      weeklyUpdates: telegram.weeklyUpdates !== undefined ? !!telegram.weeklyUpdates : (currentSettings.telegram?.weeklyUpdates ?? true),
+      lastWeeklyUpdateCheck: currentSettings.telegram?.lastWeeklyUpdateCheck || null,
       botToken: telegram.botToken ? telegram.botToken.trim() : '',
       chatId: telegram.chatId ? telegram.chatId.trim() : ''
     }
@@ -541,6 +748,17 @@ app.post('/api/settings', async (req, res) => {
 
   await writeSettings(settings);
   res.json(settings);
+});
+
+// API: Manuelle Update-Prüfung aller eingetragenen Server auslösen
+app.post('/api/servers/check-updates', async (req, res) => {
+  try {
+    const summary = await checkWeeklyServerUpdates(true);
+    res.json(summary);
+  } catch (error) {
+    console.error('Fehler beim manuellen Update-Check:', error);
+    res.status(500).json({ error: 'Fehler bei der Update-Prüfung.' });
+  }
 });
 
 // API: Telegram Verbindung testen
@@ -627,7 +845,8 @@ app.post('/api/servers', async (req, res) => {
     status: 'checking',
     latency: null,
     lastChecked: null,
-    favorite: req.body.favorite || false
+    favorite: req.body.favorite || false,
+    ignoreUpdates: !!req.body.ignoreUpdates
   };
 
   // Sofortigen Check für den neuen Server durchführen
@@ -664,6 +883,9 @@ app.put('/api/servers/:id', async (req, res) => {
   servers[serverIndex].category = category || servers[serverIndex].category;
   if (req.body.favorite !== undefined) {
     servers[serverIndex].favorite = req.body.favorite;
+  }
+  if (req.body.ignoreUpdates !== undefined) {
+    servers[serverIndex].ignoreUpdates = !!req.body.ignoreUpdates;
   }
   servers[serverIndex].status = 'checking';
 
@@ -806,6 +1028,10 @@ app.post('/api/servers/batch', async (req, res) => {
 
 // Automatischer Check im Hintergrund alle 30 Sekunden
 setInterval(checkAllServers, 30 * 1000);
+
+// Wöchentliche Update-Prüfung (prüft alle 6 Stunden, ob 7 Tage seit dem letzten Check vergangen sind)
+setInterval(runScheduledWeeklyCheckIfNeeded, 6 * 60 * 60 * 1000);
+setTimeout(runScheduledWeeklyCheckIfNeeded, 15 * 1000);
 
 // Beim Start des Servers einmal alle prüfen
 checkAllServers();

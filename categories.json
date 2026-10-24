@@ -2,36 +2,43 @@
   {
     "id": "cat-1",
     "name": "Smart Home",
-    "icon": "fa-house-signal"
+    "icon": "fa-house-signal",
+    "color": "#a78bfa"
   },
   {
     "id": "cat-2",
     "name": "Media",
-    "icon": "fa-film"
+    "icon": "fa-film",
+    "color": "#a78bfa"
   },
   {
     "id": "cat-3",
     "name": "Network",
-    "icon": "fa-network-wired"
+    "icon": "fa-network-wired",
+    "color": "#a78bfa"
   },
   {
     "id": "cat-4",
     "name": "Storage",
-    "icon": "fa-hard-drive"
+    "icon": "fa-hard-drive",
+    "color": "#a78bfa"
   },
   {
     "id": "cat-5",
     "name": "Development",
-    "icon": "fa-code"
+    "icon": "fa-code",
+    "color": "#a78bfa"
   },
   {
     "id": "cat-6",
     "name": "Other",
-    "icon": "fa-screwdriver-wrench"
+    "icon": "fa-screwdriver-wrench",
+    "color": "#a78bfa"
   },
   {
     "id": "cat-1782483689433",
     "name": "Office",
-    "icon": "fa-envelope"
+    "icon": "fa-envelope",
+    "color": "#a78bfa"
   }
 ]
