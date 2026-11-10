@@ -651,22 +651,34 @@ async function dockerEngineRequest(hostIp, method, apiPath, body = null, timeout
   }
 
   if (REMOTE_SSH_DOCKER_IPS.has(hostIp)) {
-    const curlArgs = [
+    const safeUrl = `'http://localhost${apiPath.replace(/'/g, "'\\''")}'`;
+    let remoteCmd = `sudo -n curl -s -w "\\n__HTTP_STATUS__:%{http_code}" --unix-socket /var/run/docker.sock -X ${method}`;
+    let stdinData = null;
+
+    if (body !== null) {
+      stdinData = JSON.stringify(body);
+      remoteCmd += ` -H "Content-Type: application/json" --data-binary @-`;
+    }
+    remoteCmd += ` ${safeUrl}`;
+
+    const sshArgs = [
       '-o', 'BatchMode=yes',
       '-o', 'StrictHostKeyChecking=accept-new',
       '-o', 'ConnectTimeout=6',
       `pi@${hostIp}`,
-      'sudo', '-n', 'curl', '-s', '-w', '\\n__HTTP_STATUS__:%{http_code}',
-      '--unix-socket', '/var/run/docker.sock',
-      '-X', method
+      remoteCmd
     ];
 
-    if (body !== null) {
-      curlArgs.push('-H', 'Content-Type: application/json', '-d', JSON.stringify(body));
-    }
-    curlArgs.push(`http://localhost${apiPath}`);
-
-    const { stdout } = await execFileAsync('ssh', curlArgs, { timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await new Promise((resolve, reject) => {
+      const child = execFile('ssh', sshArgs, { timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+        if (err) return reject(new Error(stderr || err.message));
+        resolve({ stdout });
+      });
+      if (stdinData !== null && child.stdin) {
+        child.stdin.write(stdinData);
+        child.stdin.end();
+      }
+    });
     const markerIdx = stdout.lastIndexOf('\n__HTTP_STATUS__:');
     const rawText = markerIdx !== -1 ? stdout.slice(0, markerIdx).trim() : stdout.trim();
     const statusCode = markerIdx !== -1 ? parseInt(stdout.slice(markerIdx + 17).trim(), 10) : 200;
