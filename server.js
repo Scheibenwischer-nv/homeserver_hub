@@ -5,6 +5,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
 import net from 'net';
+import http from 'http';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 // TLS-Zertifikatsprüfungen für lokale HTTPS-Dienste (z. B. Proxmox) deaktivieren
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -526,22 +531,26 @@ async function checkAllServers() {
 
 const KNOWN_GITHUB_REPOS = [
   { keywords: ['home assistant', 'homeassistant', 'hass'], repo: 'home-assistant/core', label: 'Home Assistant' },
-  { keywords: ['stirling-pdf', 'stirling'], repo: 'Stirling-Tools/Stirling-PDF', label: 'Stirling-PDF' },
+  { keywords: ['stirling-pdf', 'stirling', 'sterling'], repo: 'Stirling-Tools/Stirling-PDF', label: 'Stirling-PDF' },
   { keywords: ['n8n'], repo: 'n8n-io/n8n', label: 'n8n' },
   { keywords: ['portainer'], repo: 'portainer/portainer', label: 'Portainer' },
   { keywords: ['seafile'], repo: 'haiwen/seafile', label: 'Seafile' },
-  { keywords: ['openmediavault', 'omv'], repo: 'openmediavault/openmediavault', label: 'openmediavault' },
+  { keywords: ['openmediavault', 'open media vault', 'omv'], repo: 'openmediavault/openmediavault', label: 'openmediavault' },
   { keywords: ['open archiver', 'openarchiver'], repo: 'LogicLabs-OU/OpenArchiver', label: 'Open Archiver' },
+  { keywords: ['photoprism'], repo: 'photoprism/photoprism', label: 'PhotoPrism' },
+  { keywords: ['kopia'], repo: 'kopia/kopia', label: 'Kopia' },
+  { keywords: ['netbird'], repo: 'netbirdio/netbird', label: 'NetBird' },
+  { keywords: ['onlyoffice'], repo: 'ONLYOFFICE/DocumentServer', label: 'ONLYOFFICE DocumentServer' },
   { keywords: ['pi-hole', 'pihole'], repo: 'pi-hole/pi-hole', label: 'Pi-hole' },
   { keywords: ['adguard'], repo: 'AdguardTeam/AdGuardHome', label: 'AdGuard Home' },
-  { keywords: ['nextcloud'], repo: 'nextcloud/server', label: 'Nextcloud' },
+  { keywords: ['nextcloud', 'owncloud'], repo: 'nextcloud/server', label: 'Nextcloud / OwnCloud' },
   { keywords: ['jellyfin'], repo: 'jellyfin/jellyfin', label: 'Jellyfin' },
   { keywords: ['plex'], repo: 'plexinc/pms-docker', label: 'Plex Media Server' },
   { keywords: ['immich'], repo: 'immich-app/immich', label: 'Immich' },
   { keywords: ['vaultwarden'], repo: 'dani-garcia/vaultwarden', label: 'Vaultwarden' },
   { keywords: ['uptime kuma', 'uptime-kuma'], repo: 'louislam/uptime-kuma', label: 'Uptime Kuma' },
   { keywords: ['traefik'], repo: 'traefik/traefik', label: 'Traefik' },
-  { keywords: ['nginx proxy manager'], repo: 'NginxProxyManager/nginx-proxy-manager', label: 'Nginx Proxy Manager' },
+  { keywords: ['nginx proxy manager', 'nginx strato', 'npm'], repo: 'NginxProxyManager/nginx-proxy-manager', label: 'Nginx Proxy Manager' },
   { keywords: ['grafana'], repo: 'grafana/grafana', label: 'Grafana' },
   { keywords: ['prometheus'], repo: 'prometheus/prometheus', label: 'Prometheus' },
   { keywords: ['gitea'], repo: 'go-gitea/gitea', label: 'Gitea' },
@@ -550,8 +559,296 @@ const KNOWN_GITHUB_REPOS = [
   { keywords: ['iobroker'], repo: 'ioBroker/ioBroker.js-controller', label: 'ioBroker' },
   { keywords: ['mealie'], repo: 'mealie-recipes/mealie', label: 'Mealie' },
   { keywords: ['bookstack'], repo: 'BookStackApp/BookStack', label: 'BookStack' },
-  { keywords: ['homepage'], repo: 'gethomepage/homepage', label: 'Homepage' }
+  { keywords: ['homepage'], repo: 'gethomepage/homepage', label: 'Homepage' },
+  { keywords: ['homarr'], repo: 'homarr-labs/homarr', label: 'Homarr' }
 ];
+
+function isServerExcludedFromUpdates(server) {
+  if (!server) return true;
+  if (server.ignoreUpdates) return true;
+  const lower = (server.name || '').toLowerCase();
+  // Paperless ist strikt vom Update gesperrt (Ausnahme: "Portainer (Paperless)" meint Portainer)
+  if (lower.includes('paperless') && !lower.includes('portainer')) {
+    return true;
+  }
+  return false;
+}
+
+// ==========================================================================
+// Docker-Container Update & Rollback Engine (Lokal via Socket & Remote via SSH)
+// ==========================================================================
+
+const LOCAL_DOCKER_IPS = new Set(['127.0.0.1', 'localhost', '192.168.100.97']);
+const REMOTE_SSH_DOCKER_IPS = new Set(['192.168.100.251']);
+
+function splitImageRepoTag(imageStr) {
+  const lastSlash = imageStr.lastIndexOf('/');
+  const lastColon = imageStr.lastIndexOf(':');
+  if (lastColon > lastSlash) {
+    return {
+      repo: imageStr.slice(0, lastColon),
+      tag: imageStr.slice(lastColon + 1)
+    };
+  }
+  return { repo: imageStr, tag: 'latest' };
+}
+
+async function dockerEngineRequest(hostIp, method, apiPath, body = null, timeoutMs = 180000) {
+  const isLocal = LOCAL_DOCKER_IPS.has(hostIp) && fsSync.existsSync('/var/run/docker.sock');
+
+  if (isLocal) {
+    return new Promise((resolve, reject) => {
+      const payloadStr = body !== null ? JSON.stringify(body) : null;
+      const headers = {};
+      if (payloadStr !== null) {
+        headers['Content-Type'] = 'application/json';
+        headers['Content-Length'] = Buffer.byteLength(payloadStr);
+      }
+
+      const req = http.request(
+        {
+          socketPath: '/var/run/docker.sock',
+          path: apiPath,
+          method,
+          headers,
+          timeout: timeoutMs
+        },
+        (res) => {
+          const chunks = [];
+          res.on('data', (chunk) => chunks.push(chunk));
+          res.on('end', () => {
+            const rawText = Buffer.concat(chunks).toString('utf-8');
+            let parsed = null;
+            try {
+              parsed = rawText ? JSON.parse(rawText) : null;
+            } catch {
+              parsed = rawText;
+            }
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              // Bei Streaming-Endpunkten (wie /images/create) auf eingebettete Fehler prüfen
+              if (typeof rawText === 'string' && rawText.includes('"errorDetail"')) {
+                return reject(new Error(`Docker Pull Fehler: ${rawText.slice(-300)}`));
+              }
+              resolve({ statusCode: res.statusCode, data: parsed, raw: rawText });
+            } else {
+              const errMsg = (parsed && parsed.message) ? parsed.message : rawText || `HTTP ${res.statusCode}`;
+              reject(new Error(`Docker API (${method} ${apiPath}): ${errMsg}`));
+            }
+          });
+        }
+      );
+
+      req.on('timeout', () => {
+        req.destroy(new Error(`Docker API Timeout (${method} ${apiPath})`));
+      });
+      req.on('error', (err) => reject(err));
+
+      if (payloadStr !== null) {
+        req.write(payloadStr);
+      }
+      req.end();
+    });
+  }
+
+  if (REMOTE_SSH_DOCKER_IPS.has(hostIp)) {
+    const curlArgs = [
+      '-o', 'BatchMode=yes',
+      '-o', 'StrictHostKeyChecking=accept-new',
+      '-o', 'ConnectTimeout=6',
+      `pi@${hostIp}`,
+      'sudo', '-n', 'curl', '-s', '-w', '\\n__HTTP_STATUS__:%{http_code}',
+      '--unix-socket', '/var/run/docker.sock',
+      '-X', method
+    ];
+
+    if (body !== null) {
+      curlArgs.push('-H', 'Content-Type: application/json', '-d', JSON.stringify(body));
+    }
+    curlArgs.push(`http://localhost${apiPath}`);
+
+    const { stdout } = await execFileAsync('ssh', curlArgs, { timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 });
+    const markerIdx = stdout.lastIndexOf('\n__HTTP_STATUS__:');
+    const rawText = markerIdx !== -1 ? stdout.slice(0, markerIdx).trim() : stdout.trim();
+    const statusCode = markerIdx !== -1 ? parseInt(stdout.slice(markerIdx + 17).trim(), 10) : 200;
+
+    let parsed = null;
+    try {
+      parsed = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      parsed = rawText;
+    }
+
+    if (statusCode >= 200 && statusCode < 300) {
+      if (typeof rawText === 'string' && rawText.includes('"errorDetail"')) {
+        throw new Error(`Remote Docker Pull Fehler: ${rawText.slice(-300)}`);
+      }
+      return { statusCode, data: parsed, raw: rawText };
+    }
+    const errMsg = (parsed && parsed.message) ? parsed.message : rawText || `HTTP ${statusCode}`;
+    throw new Error(`Remote Docker API (${hostIp} ${method} ${apiPath}): ${errMsg}`);
+  }
+
+  throw new Error(`Host ${hostIp} unterstützt keine direkte Docker-Steuerung.`);
+}
+
+async function listContainersOnHost(hostIp) {
+  try {
+    const res = await dockerEngineRequest(hostIp, 'GET', '/containers/json?all=true', null, 8000);
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function parseServerHostAndPort(serverUrl) {
+  try {
+    let raw = (serverUrl || '').trim();
+    if (!/^https?:\/\//i.test(raw)) {
+      raw = `http://${raw}`;
+    }
+    const u = new URL(raw);
+    const port = u.port ? parseInt(u.port, 10) : (u.protocol === 'https:' ? 443 : 80);
+    return { hostIp: u.hostname, port };
+  } catch {
+    return { hostIp: null, port: null };
+  }
+}
+
+function matchContainerFromList(server, containers, hostIp, port) {
+  if (!Array.isArray(containers) || containers.length === 0) return null;
+
+  // 1. Primärer Treffer über den veröffentlichten TCP-Port
+  let found = containers.find(c =>
+    Array.isArray(c.Ports) && c.Ports.some(p => p.PublicPort === port)
+  );
+
+  // 2. Fallback über Namen, falls kein Port-Match
+  if (!found) {
+    const sName = (server.name || '').toLowerCase();
+    found = containers.find(c => {
+      const cNames = (c.Names || []).map(n => n.replace(/^\//, '').toLowerCase());
+      if (sName.includes('n8n')) return cNames.includes('n8n');
+      if (sName.includes('stirling') || sName.includes('sterling')) return cNames.some(n => n.includes('stirling'));
+      if (sName.includes('onlyoffice')) return cNames.some(n => n.includes('onlyoffice'));
+      if (sName.includes('owncloud') || sName.includes('nextcloud')) return cNames.some(n => n.includes('nextcloud') || n.includes('owncloud'));
+      if (sName.includes('portainer')) return cNames.some(n => n.includes('portainer'));
+      if (sName.includes('openarchiver') || sName.includes('open archiver')) return cNames.some(n => n === 'open-archiver');
+      if (sName.includes('kopia')) return cNames.some(n => n.includes('kopia'));
+      return false;
+    });
+  }
+
+  if (!found) return null;
+
+  const rawName = (found.Names && found.Names[0]) ? found.Names[0] : '';
+  const cleanName = rawName.replace(/^\//, '');
+
+  // Sicherheits-Sperre: Niemals Paperless-Container als updatebar zurückgeben!
+  if (/paperless/i.test(cleanName) || /paperless/i.test(found.Image || '')) {
+    return null;
+  }
+
+  return {
+    hostIp,
+    containerId: found.Id,
+    containerName: cleanName,
+    image: found.Image,
+    imageId: found.ImageID
+  };
+}
+
+async function recreateContainerWithImage(hostIp, inspectData, targetImage) {
+  const oldId = inspectData.Id;
+  const cleanName = (inspectData.Name || '').replace(/^\//, '');
+  const backupName = `${cleanName}-backup-${Date.now()}`;
+  const oldShortId = oldId.slice(0, 12);
+
+  const createPayload = {
+    ...inspectData.Config,
+    Image: targetImage,
+    HostConfig: inspectData.HostConfig
+  };
+
+  if (createPayload.Hostname && createPayload.Hostname === oldShortId) {
+    delete createPayload.Hostname;
+  }
+
+  const netMode = inspectData.HostConfig?.NetworkMode;
+  const networks = inspectData.NetworkSettings?.Networks || {};
+  if (netMode && netMode !== 'default' && netMode !== 'host' && netMode !== 'none' && networks[netMode]) {
+    const netInfo = networks[netMode];
+    createPayload.NetworkingConfig = {
+      EndpointsConfig: {
+        [netMode]: {
+          IPAMConfig: netInfo.IPAMConfig || null,
+          Links: netInfo.Links || null,
+          Aliases: Array.isArray(netInfo.Aliases)
+            ? [...new Set(netInfo.Aliases.filter(a => a && a !== oldShortId))]
+            : []
+        }
+      }
+    };
+  }
+
+  // 1. Alten Container umbenennen & stoppen
+  await dockerEngineRequest(hostIp, 'POST', `/containers/${oldId}/rename?name=${encodeURIComponent(backupName)}`);
+  try {
+    await dockerEngineRequest(hostIp, 'POST', `/containers/${oldId}/stop?t=10`);
+  } catch {
+    // Falls bereits gestoppt, ignorieren
+  }
+
+  let newContainerId = null;
+  try {
+    // 2. Neuen Container mit identischer Konfiguration anlegen
+    const createRes = await dockerEngineRequest(
+      hostIp,
+      'POST',
+      `/containers/create?name=${encodeURIComponent(cleanName)}`,
+      createPayload
+    );
+    newContainerId = createRes.data.Id;
+
+    // 3. Zusätzliche Netzwerke verbinden (falls vorhanden)
+    for (const netName of Object.keys(networks)) {
+      if (netName !== netMode && netName !== 'bridge' && netName !== 'host' && netName !== 'none') {
+        try {
+          await dockerEngineRequest(hostIp, 'POST', `/networks/${encodeURIComponent(netName)}/connect`, {
+            Container: newContainerId
+          });
+        } catch (netErr) {
+          console.warn(`[ContainerUpdate] Hinweis bei Zusatz-Netzwerk ${netName}:`, netErr.message);
+        }
+      }
+    }
+
+    // 4. Neuen Container starten
+    await dockerEngineRequest(hostIp, 'POST', `/containers/${newContainerId}/start`);
+
+    // 5. Alten Backup-Container entfernen (das gesicherte Rollback-Image bleibt erhalten!)
+    try {
+      await dockerEngineRequest(hostIp, 'DELETE', `/containers/${oldId}?v=false`);
+    } catch (delErr) {
+      console.warn(`[ContainerUpdate] Konnte alten Container ${backupName} nicht löschen:`, delErr.message);
+    }
+
+    return newContainerId;
+  } catch (err) {
+    console.error(`[ContainerUpdate] Fehler beim Erstellen/Starten von ${cleanName}, stelle vorherigen Container wieder her:`, err.message);
+    if (newContainerId) {
+      try {
+        await dockerEngineRequest(hostIp, 'DELETE', `/containers/${newContainerId}?force=true`);
+      } catch {}
+    }
+    try {
+      await dockerEngineRequest(hostIp, 'POST', `/containers/${oldId}/rename?name=${encodeURIComponent(cleanName)}`);
+      await dockerEngineRequest(hostIp, 'POST', `/containers/${oldId}/start`);
+    } catch (restoreErr) {
+      console.error(`[ContainerUpdate] Kritischer Fehler bei Wiederherstellung von ${cleanName}:`, restoreErr.message);
+    }
+    throw err;
+  }
+}
 
 function matchGithubRepo(serverName) {
   const lower = (serverName || '').toLowerCase();
@@ -620,13 +917,14 @@ async function checkWeeklyServerUpdates(forceTelegramReport = false) {
   const settings = await readSettings();
 
   const checkedRepos = new Map();
+  const hostContainersCache = new Map();
   const results = [];
   const excludedServers = [];
   let newUpdatesCount = 0;
 
   for (const server of servers) {
     // Ausgeschlossene Server (z. B. Paperless oder manuell deaktivierte Dienste) überspringen
-    if (server.ignoreUpdates || /paperless/i.test(server.name || '')) {
+    if (isServerExcludedFromUpdates(server)) {
       excludedServers.push({
         serverId: server.id,
         serverName: server.name,
@@ -643,6 +941,18 @@ async function checkWeeklyServerUpdates(forceTelegramReport = false) {
     if (releaseInfo === undefined) {
       releaseInfo = await fetchLatestGithubRelease(matched.repo);
       checkedRepos.set(matched.repo, releaseInfo);
+    }
+
+    // Prüfen, ob für diesen Server ein verwaltbarer Docker-Container existiert
+    let containerInfo = null;
+    const { hostIp, port } = parseServerHostAndPort(server.url);
+    if (hostIp && (LOCAL_DOCKER_IPS.has(hostIp) || REMOTE_SSH_DOCKER_IPS.has(hostIp))) {
+      let containers = hostContainersCache.get(hostIp);
+      if (containers === undefined) {
+        containers = await listContainersOnHost(hostIp);
+        hostContainersCache.set(hostIp, containers);
+      }
+      containerInfo = matchContainerFromList(server, containers, hostIp, port);
     }
 
     if (releaseInfo) {
@@ -666,7 +976,15 @@ async function checkWeeklyServerUpdates(forceTelegramReport = false) {
         isNew,
         url: releaseInfo.url,
         publishedAt: releaseInfo.publishedAt || null,
-        favicon: server.favicon || null
+        favicon: server.favicon || null,
+        canUpdateContainer: Boolean(containerInfo),
+        containerName: containerInfo ? containerInfo.containerName : null,
+        containerImage: containerInfo ? containerInfo.image : null,
+        hostIp: containerInfo ? containerInfo.hostIp : null,
+        rollbackAvailable: Boolean(server.rollbackAvailable && (server.rollbackImageId || server.rollbackImageTag)),
+        rollbackVersion: server.rollbackVersion || null,
+        rollbackSavedAt: server.rollbackSavedAt || null,
+        installedVersion: server.installedVersion || null
       });
     }
   }
@@ -771,6 +1089,157 @@ app.post('/api/servers/check-updates', async (req, res) => {
   } catch (error) {
     console.error('Fehler beim manuellen Update-Check:', error);
     res.status(500).json({ error: 'Fehler bei der Update-Prüfung.' });
+  }
+});
+
+// API: Docker-Container eines Servers updaten (mit automatischem Rollback-Snapshot)
+app.post('/api/servers/:id/update-container', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const servers = await readServers();
+    const serverIndex = servers.findIndex(s => s.id === id);
+    if (serverIndex === -1) {
+      return res.status(404).json({ error: 'Server nicht gefunden.' });
+    }
+
+    const server = servers[serverIndex];
+    if (isServerExcludedFromUpdates(server)) {
+      return res.status(403).json({ error: 'Dieser Server (z. B. Paperless) ist vom Update gesperrt!' });
+    }
+
+    const { hostIp, port } = parseServerHostAndPort(server.url);
+    if (!hostIp || (!LOCAL_DOCKER_IPS.has(hostIp) && !REMOTE_SSH_DOCKER_IPS.has(hostIp))) {
+      return res.status(400).json({ error: 'Für diesen Server ist kein unterstützter Docker-Host hinterlegt.' });
+    }
+
+    const containers = await listContainersOnHost(hostIp);
+    const matchedContainer = matchContainerFromList(server, containers, hostIp, port);
+    if (!matchedContainer) {
+      return res.status(404).json({ error: 'Kein passender Docker-Container für diesen Server gefunden.' });
+    }
+
+    // 1. Laufenden Container inspizieren
+    const inspectRes = await dockerEngineRequest(hostIp, 'GET', `/containers/${matchedContainer.containerId}/json`);
+    const inspectData = inspectRes.data;
+    const currentImageId = inspectData.Image;
+    const configuredImage = inspectData.Config.Image;
+    const cleanName = matchedContainer.containerName;
+
+    // 2. Aktuelles Image lokal als Rollback-Snapshot taggen (damit es nie gelöscht wird)
+    const rollbackRepo = `homeserver-rollback/${cleanName.toLowerCase().replace(/[^a-z0-9_.-]/g, '-')}`;
+    const rollbackTag = 'previous';
+    const rollbackFullTag = `${rollbackRepo}:${rollbackTag}`;
+
+    console.log(`[ContainerUpdate] Sichere aktuelles Image (${currentImageId.slice(0, 19)}) von "${cleanName}" als ${rollbackFullTag}...`);
+    await dockerEngineRequest(
+      hostIp,
+      'POST',
+      `/images/${encodeURIComponent(currentImageId)}/tag?repo=${encodeURIComponent(rollbackRepo)}&tag=${encodeURIComponent(rollbackTag)}`
+    );
+
+    // 3. Neues Image von der Registry pullen (während der alte Container noch weiterläuft!)
+    const { repo, tag } = splitImageRepoTag(configuredImage);
+    console.log(`[ContainerUpdate] Lade neuestes Image ${repo}:${tag} auf ${hostIp} herunter...`);
+    await dockerEngineRequest(
+      hostIp,
+      'POST',
+      `/images/create?fromImage=${encodeURIComponent(repo)}&tag=${encodeURIComponent(tag)}`,
+      null,
+      300000 // 5 Minuten Timeout für große Images
+    );
+
+    // 4. Container mit dem neuen Image neu erstellen & starten
+    console.log(`[ContainerUpdate] Starte Container "${cleanName}" mit neuem Image neu...`);
+    await recreateContainerWithImage(hostIp, inspectData, configuredImage);
+
+    // 5. Rollback-Metadaten in servers.json speichern
+    const previousVerLabel = server.installedVersion || `${configuredImage} (${currentImageId.replace('sha256:', '').slice(0, 8)})`;
+    server.rollbackAvailable = true;
+    server.rollbackImageId = currentImageId;
+    server.rollbackImageTag = rollbackFullTag;
+    server.rollbackOriginalImage = configuredImage;
+    server.rollbackContainerName = cleanName;
+    server.rollbackHostIp = hostIp;
+    server.rollbackVersion = previousVerLabel;
+    server.rollbackSavedAt = new Date().toISOString();
+    server.installedVersion = server.lastKnownRelease || 'Aktuell';
+    server.lastUpdatedAt = new Date().toISOString();
+
+    await writeServers(servers);
+    console.log(`[ContainerUpdate] Update für "${cleanName}" erfolgreich abgeschlossen!`);
+
+    res.json({
+      success: true,
+      containerName: cleanName,
+      installedVersion: server.installedVersion,
+      rollbackAvailable: true,
+      rollbackVersion: server.rollbackVersion,
+      rollbackSavedAt: server.rollbackSavedAt
+    });
+  } catch (error) {
+    console.error(`[ContainerUpdate] Fehler beim Update von Server ${id}:`, error);
+    res.status(500).json({ error: error.message || 'Fehler beim Aktualisieren des Containers.' });
+  }
+});
+
+// API: Docker-Container auf die zuletzt gesicherte Version zurücksetzen (Rollback)
+app.post('/api/servers/:id/rollback-container', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const servers = await readServers();
+    const serverIndex = servers.findIndex(s => s.id === id);
+    if (serverIndex === -1) {
+      return res.status(404).json({ error: 'Server nicht gefunden.' });
+    }
+
+    const server = servers[serverIndex];
+    if (isServerExcludedFromUpdates(server)) {
+      return res.status(403).json({ error: 'Dieser Server ist gesperrt!' });
+    }
+
+    if (!server.rollbackAvailable || (!server.rollbackImageId && !server.rollbackImageTag)) {
+      return res.status(400).json({ error: 'Für diesen Server ist noch kein Rollback-Snapshot vorhanden.' });
+    }
+
+    const { hostIp, port } = parseServerHostAndPort(server.url);
+    const targetHostIp = server.rollbackHostIp || hostIp;
+    const containers = await listContainersOnHost(targetHostIp);
+    const matchedContainer = matchContainerFromList(server, containers, targetHostIp, port);
+    if (!matchedContainer) {
+      return res.status(404).json({ error: 'Laufender Container für das Rollback wurde nicht gefunden.' });
+    }
+
+    const inspectRes = await dockerEngineRequest(targetHostIp, 'GET', `/containers/${matchedContainer.containerId}/json`);
+    const inspectData = inspectRes.data;
+    const configuredImage = server.rollbackOriginalImage || inspectData.Config.Image;
+    const rollbackSource = server.rollbackImageTag || server.rollbackImageId;
+
+    // 1. Gesichertes Rollback-Image wieder auf den ursprünglichen Image-Tag setzen
+    const { repo, tag } = splitImageRepoTag(configuredImage);
+    console.log(`[ContainerRollback] Stelle Image ${rollbackSource} als ${repo}:${tag} wieder her...`);
+    await dockerEngineRequest(
+      targetHostIp,
+      'POST',
+      `/images/${encodeURIComponent(rollbackSource)}/tag?repo=${encodeURIComponent(repo)}&tag=${encodeURIComponent(tag)}`
+    );
+
+    // 2. Container mit dem wiederhergestellten Image neu starten
+    console.log(`[ContainerRollback] Starte Container "${matchedContainer.containerName}" mit vorheriger Version...`);
+    await recreateContainerWithImage(targetHostIp, inspectData, configuredImage);
+
+    server.installedVersion = server.rollbackVersion || 'Vorherige Version';
+    server.lastRolledBackAt = new Date().toISOString();
+    await writeServers(servers);
+
+    console.log(`[ContainerRollback] Rollback für "${matchedContainer.containerName}" erfolgreich abgeschlossen!`);
+    res.json({
+      success: true,
+      containerName: matchedContainer.containerName,
+      restoredVersion: server.installedVersion
+    });
+  } catch (error) {
+    console.error(`[ContainerRollback] Fehler beim Rollback von Server ${id}:`, error);
+    res.status(500).json({ error: error.message || 'Fehler beim Zurücksetzen auf die vorherige Version.' });
   }
 });
 

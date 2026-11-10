@@ -1545,6 +1545,69 @@ dialog[open]::backdrop {
   transform: translateY(-1px);
 }
 
+.update-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btn-update-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  font-family: var(--font-main);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.25));
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-update-container:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.45), rgba(6, 182, 212, 0.45));
+  border-color: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-rollback-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  font-family: var(--font-main);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-rollback-container:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.28);
+  border-color: #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-update-container:disabled,
+.btn-rollback-container:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
 
 
 

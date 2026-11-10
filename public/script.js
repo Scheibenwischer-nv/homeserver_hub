@@ -91,6 +91,15 @@ const TRANSLATIONS = {
     updates_badge_current: "✅ Aktuellste Version",
     updates_badge_excluded: "🔒 Ausgeschlossen (Nicht updaten)",
     updates_btn_release_notes: "Release Notes",
+    updates_btn_start_update: "Update starten",
+    updates_btn_updating: "Aktualisiere...",
+    updates_btn_rollback: "Letzte Version",
+    updates_btn_rolling_back: "Stelle wieder her...",
+    updates_confirm_update: "Möchtest du den Docker-Container \"{container}\" ({name}) jetzt auf das neueste Image aktualisieren?\n\nDas aktuelle Image wird vorher automatisch als Backup für ein 1-Klick-Rollback gesichert.",
+    updates_confirm_rollback: "Möchtest du den Container \"{container}\" ({name}) wirklich auf die zuletzt gesicherte Version zurücksetzen?",
+    updates_update_success: "✅ \"{name}\" (Container: {container}) wurde erfolgreich aktualisiert! Ein Rollback-Backup der vorherigen Version wurde angelegt.",
+    updates_rollback_success: "⏪ \"{name}\" (Container: {container}) wurde erfolgreich auf die vorherige Version zurückgesetzt!",
+    updates_action_error: "Fehler: {error}",
     updates_empty_text: "Keine unterstützten GitHub-Dienste in deiner Serverliste gefunden.",
     btn_recheck_updates: "Erneut prüfen",
     
@@ -276,6 +285,15 @@ const TRANSLATIONS = {
     updates_badge_current: "✅ Latest Release",
     updates_badge_excluded: "🔒 Excluded (Do not update)",
     updates_btn_release_notes: "Release Notes",
+    updates_btn_start_update: "Start Update",
+    updates_btn_updating: "Updating...",
+    updates_btn_rollback: "Previous Version",
+    updates_btn_rolling_back: "Restoring...",
+    updates_confirm_update: "Do you want to update Docker container \"{container}\" ({name}) to the latest image now?\n\nThe current image will be backed up automatically for 1-click rollback.",
+    updates_confirm_rollback: "Do you really want to roll back container \"{container}\" ({name}) to the previously saved version?",
+    updates_update_success: "✅ \"{name}\" (Container: {container}) was updated successfully! A rollback snapshot was saved.",
+    updates_rollback_success: "⏪ \"{name}\" (Container: {container}) was rolled back to the previous version!",
+    updates_action_error: "Error: {error}",
     updates_empty_text: "No supported GitHub services found in your server list.",
     btn_recheck_updates: "Check Again",
     
@@ -1600,6 +1618,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const badgeClass = item.isNew ? 'new-release' : 'up-to-date';
       const badgeLabel = item.isNew ? translate('updates_badge_new') : translate('updates_badge_current');
 
+      const containerMetaHtml = item.canUpdateContainer
+        ? `<div style="font-size: 0.75rem; color: var(--color-accent); margin-top: 0.25rem;">
+             <i class="fa-brands fa-docker"></i> Container: <code>${escapeHTML(item.containerName)}</code> (${escapeHTML(item.hostIp || '')})
+             ${item.rollbackAvailable ? ` • <span style="color: #fcd34d;"><i class="fa-solid fa-clock-rotate-left"></i> Backup bereit</span>` : ''}
+           </div>`
+        : '';
+
+      const updateBtnHtml = item.canUpdateContainer
+        ? `<button type="button" class="btn-update-container" data-server-id="${escapeHTML(item.serverId)}" data-server-name="${escapeHTML(item.serverName)}" data-container-name="${escapeHTML(item.containerName)}">
+             <i class="fa-solid fa-download"></i> <span>${translate('updates_btn_start_update')}</span>
+           </button>`
+        : '';
+
+      const rollbackBtnHtml = (item.canUpdateContainer && item.rollbackAvailable)
+        ? `<button type="button" class="btn-rollback-container" data-server-id="${escapeHTML(item.serverId)}" data-server-name="${escapeHTML(item.serverName)}" data-container-name="${escapeHTML(item.containerName)}" title="${escapeHTML(item.rollbackVersion || '')}">
+             <i class="fa-solid fa-rotate-left"></i> <span>${translate('updates_btn_rollback')}</span>
+           </button>`
+        : '';
+
       row.innerHTML = `
         <div class="scan-result-info">
           <div class="scan-result-icon" style="background: rgba(139, 92, 246, 0.12); color: var(--color-primary);">
@@ -1615,15 +1652,28 @@ document.addEventListener('DOMContentLoaded', () => {
               ${escapeHTML(item.repo || item.repoLabel || '')}
               ${item.previousVersion && item.previousVersion !== item.version ? ` • Vorher: ${escapeHTML(item.previousVersion)}` : ''}
             </span>
+            ${containerMetaHtml}
           </div>
         </div>
-        <div class="scan-result-actions">
+        <div class="scan-result-actions update-actions-group">
+          ${updateBtnHtml}
+          ${rollbackBtnHtml}
           <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" class="btn-release-link">
             <span>${translate('updates_btn_release_notes')}</span>
             <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem;"></i>
           </a>
         </div>
       `;
+
+      const updateBtn = row.querySelector('.btn-update-container');
+      if (updateBtn) {
+        updateBtn.addEventListener('click', () => handleContainerUpdate(item, updateBtn));
+      }
+
+      const rollbackBtn = row.querySelector('.btn-rollback-container');
+      if (rollbackBtn) {
+        rollbackBtn.addEventListener('click', () => handleContainerRollback(item, rollbackBtn));
+      }
 
       updatesResultsArea.appendChild(row);
     });
@@ -1649,6 +1699,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
       updatesResultsArea.appendChild(row);
     });
+  }
+
+  async function handleContainerUpdate(item, btnEl) {
+    if (!confirm(translate('updates_confirm_update', { container: item.containerName, name: item.serverName }))) {
+      return;
+    }
+
+    const originalHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>${translate('updates_btn_updating')}</span>`;
+
+    try {
+      const response = await fetch(`/api/servers/${encodeURIComponent(item.serverId)}/update-container`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Update failed');
+      }
+
+      alert(translate('updates_update_success', { name: item.serverName, container: item.containerName }));
+      await openAndRunUpdatesCheck();
+    } catch (err) {
+      console.error(err);
+      alert(translate('updates_action_error', { error: err.message }));
+      btnEl.disabled = false;
+      btnEl.innerHTML = originalHtml;
+    }
+  }
+
+  async function handleContainerRollback(item, btnEl) {
+    if (!confirm(translate('updates_confirm_rollback', { container: item.containerName, name: item.serverName }))) {
+      return;
+    }
+
+    const originalHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>${translate('updates_btn_rolling_back')}</span>`;
+
+    try {
+      const response = await fetch(`/api/servers/${encodeURIComponent(item.serverId)}/rollback-container`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Rollback failed');
+      }
+
+      alert(translate('updates_rollback_success', { name: item.serverName, container: item.containerName }));
+      await openAndRunUpdatesCheck();
+    } catch (err) {
+      console.error(err);
+      alert(translate('updates_action_error', { error: err.message }));
+      btnEl.disabled = false;
+      btnEl.innerHTML = originalHtml;
+    }
   }
 
   function closeUpdatesDialog() {
