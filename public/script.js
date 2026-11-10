@@ -14,6 +14,8 @@ const TRANSLATIONS = {
     btn_scan: "Netzwerk scannen",
     tooltip_refresh: "Status jetzt aktualisieren",
     btn_refresh: "Jetzt prüfen",
+    tooltip_updates: "Auf neue Software-Updates prüfen",
+    btn_updates: "Updates prüfen",
     tooltip_settings: "Kategorien verwalten",
     btn_settings: "Einstellungen",
     tooltip_help: "Hilfe & Anleitung anzeigen",
@@ -81,6 +83,16 @@ const TRANSLATIONS = {
     alert_updates_check_success: "Update-Prüfung abgeschlossen ({count} Dienste geprüft). Der Bericht wurde per Telegram gesendet!",
     alert_updates_check_no_telegram: "Update-Prüfung abgeschlossen ({count} Dienste geprüft). Hinweis: Aktiviere Telegram, um den Bericht aufs Handy zu erhalten.",
     alert_updates_check_error: "Fehler bei der Update-Prüfung.",
+    updates_dialog_title: "Server-Updates (GitHub Releases)",
+    updates_status_checking: "Prüfe GitHub-Releases deiner eingetragenen Server...",
+    updates_status_summary: "{count} Dienste geprüft • {newCount} neue(s) Update(s) • {excludedCount} ausgeschlossen",
+    updates_telegram_sent_hint: "📲 Bericht wurde zusätzlich per Telegram gesendet.",
+    updates_badge_new: "🆕 Neues Update",
+    updates_badge_current: "✅ Aktuellste Version",
+    updates_badge_excluded: "🔒 Ausgeschlossen (Nicht updaten)",
+    updates_btn_release_notes: "Release Notes",
+    updates_empty_text: "Keine unterstützten GitHub-Dienste in deiner Serverliste gefunden.",
+    btn_recheck_updates: "Erneut prüfen",
     
     // Settings - Help Tab
     help_intro: "Willkommen beim <strong>HomeServer Hub</strong>! Hier findest du eine einfache Schritt-für-Schritt-Anleitung, wie du deine Geräte verwaltest und Benachrichtigungen einrichtest.",
@@ -187,6 +199,8 @@ const TRANSLATIONS = {
     btn_scan: "Scan Network",
     tooltip_refresh: "Refresh status now",
     btn_refresh: "Check Now",
+    tooltip_updates: "Check for new software updates",
+    btn_updates: "Check Updates",
     tooltip_settings: "Manage categories",
     btn_settings: "Settings",
     tooltip_help: "Show Help & Instructions",
@@ -254,6 +268,16 @@ const TRANSLATIONS = {
     alert_updates_check_success: "Update check completed ({count} services checked). The report was sent via Telegram!",
     alert_updates_check_no_telegram: "Update check completed ({count} services checked). Note: Enable Telegram to receive the report on your phone.",
     alert_updates_check_error: "Error checking for updates.",
+    updates_dialog_title: "Server Updates (GitHub Releases)",
+    updates_status_checking: "Checking GitHub releases for your registered servers...",
+    updates_status_summary: "{count} services checked • {newCount} new update(s) • {excludedCount} excluded",
+    updates_telegram_sent_hint: "📲 Report was also sent via Telegram.",
+    updates_badge_new: "🆕 New Update",
+    updates_badge_current: "✅ Latest Release",
+    updates_badge_excluded: "🔒 Excluded (Do not update)",
+    updates_btn_release_notes: "Release Notes",
+    updates_empty_text: "No supported GitHub services found in your server list.",
+    btn_recheck_updates: "Check Again",
     
     // Settings - Help Tab
     help_intro: "Welcome to the <strong>HomeServer Hub</strong>! Here you will find a simple step-by-step guide on how to manage your devices and set up notifications.",
@@ -356,6 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const bgCanvas = document.getElementById('bg-canvas');
   const tilesGrid = document.getElementById('tiles-grid');
   const btnRefresh = document.getElementById('btn-refresh');
+  const btnHeaderUpdates = document.getElementById('btn-header-updates');
   const btnAddServer = document.getElementById('btn-add-server');
   
   // Stats Elements
@@ -417,6 +442,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Help Button
   const btnHelp = document.getElementById('btn-help');
+
+  // Updates Dialog DOM Elements
+  const updatesDialog = document.getElementById('updates-dialog');
+  const btnCloseUpdatesDialog = document.getElementById('btn-close-updates-dialog');
+  const btnCancelUpdates = document.getElementById('btn-cancel-updates');
+  const btnRecheckUpdates = document.getElementById('btn-recheck-updates');
+  const updatesStatusText = document.getElementById('updates-status-text');
+  const updatesProgressContainer = document.getElementById('updates-progress-container');
+  const updatesProgressBar = document.getElementById('updates-progress-bar');
+  const updatesResultsArea = document.getElementById('updates-results-area');
 
   // State
   let servers = [];
@@ -1481,36 +1516,159 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Manuellen Update-Check & Bericht auslösen
-  if (btnCheckUpdates) {
-    btnCheckUpdates.addEventListener('click', async () => {
-      const originalHtml = btnCheckUpdates.innerHTML;
-      btnCheckUpdates.disabled = true;
-      btnCheckUpdates.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${translate('telegram_checking_updates_btn')}`;
+  // Manuellen Update-Check & Bericht-Dialog auslösen
+  async function openAndRunUpdatesCheck() {
+    if (!updatesDialog) return;
+    if (settingsDialog && settingsDialog.open) {
+      settingsDialog.close();
+    }
+    if (!updatesDialog.open) {
+      updatesDialog.showModal();
+    }
 
-      try {
-        const response = await fetch('/api/servers/check-updates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        const data = await response.json();
-        if (response.ok) {
-          if (data.telegramSent) {
-            alert(translate('alert_updates_check_success', { count: data.checkedCount || 0 }));
-          } else {
-            alert(translate('alert_updates_check_no_telegram', { count: data.checkedCount || 0 }));
-          }
-        } else {
-          alert(translate('alert_updates_check_error'));
-        }
-      } catch (err) {
-        console.error(err);
-        alert(translate('alert_updates_check_error'));
-      } finally {
-        btnCheckUpdates.disabled = false;
-        btnCheckUpdates.innerHTML = originalHtml;
-      }
+    updatesStatusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color: var(--color-accent); margin-right: 0.4rem;"></i> ${translate('updates_status_checking')}`;
+    updatesProgressContainer.style.display = 'block';
+    updatesProgressBar.className = 'progress-bar-fill scanning';
+    btnRecheckUpdates.disabled = true;
+
+    updatesResultsArea.innerHTML = `
+      <div class="scan-info-text">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2.3rem; color: var(--color-primary); margin-bottom: 0.75rem;"></i>
+        <p>${translate('updates_status_checking')}</p>
+      </div>
+    `;
+
+    try {
+      const response = await fetch('/api/servers/check-updates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error('Update check failed');
+
+      updatesProgressBar.className = 'progress-bar-fill';
+      updatesProgressBar.style.width = '100%';
+
+      const summaryText = translate('updates_status_summary', {
+        count: data.checkedCount || 0,
+        newCount: data.newUpdatesCount || 0,
+        excludedCount: data.excludedCount || 0
+      });
+
+      const tgHint = data.telegramSent
+        ? `<div style="font-size: 0.8rem; color: var(--color-online); margin-top: 0.35rem; font-weight: 500;">${translate('updates_telegram_sent_hint')}</div>`
+        : '';
+
+      updatesStatusText.innerHTML = `<strong>${escapeHTML(summaryText)}</strong>${tgHint}`;
+
+      renderUpdatesResults(data.results || [], data.excludedServers || []);
+      await fetchServers();
+    } catch (err) {
+      console.error(err);
+      updatesProgressBar.className = 'progress-bar-fill';
+      updatesProgressBar.style.width = '0%';
+      updatesStatusText.textContent = translate('alert_updates_check_error');
+      updatesResultsArea.innerHTML = `
+        <div class="scan-info-text">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size: 2.3rem; color: var(--color-offline); margin-bottom: 0.75rem;"></i>
+          <p>${translate('alert_updates_check_error')}</p>
+        </div>
+      `;
+    } finally {
+      btnRecheckUpdates.disabled = false;
+    }
+  }
+
+  function renderUpdatesResults(results, excludedServers) {
+    updatesResultsArea.innerHTML = '';
+
+    if (results.length === 0 && excludedServers.length === 0) {
+      updatesResultsArea.innerHTML = `
+        <div class="scan-info-text">
+          <i class="fa-solid fa-box-open" style="font-size: 2rem; color: var(--text-dimmed); margin-bottom: 0.75rem;"></i>
+          <p>${translate('updates_empty_text')}</p>
+        </div>
+      `;
+      return;
+    }
+
+    // 1. Geprüfte GitHub-Dienste rendern
+    results.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `update-result-row ${item.isNew ? 'is-new-update' : ''}`;
+
+      const badgeClass = item.isNew ? 'new-release' : 'up-to-date';
+      const badgeLabel = item.isNew ? translate('updates_badge_new') : translate('updates_badge_current');
+
+      row.innerHTML = `
+        <div class="scan-result-info">
+          <div class="scan-result-icon" style="background: rgba(139, 92, 246, 0.12); color: var(--color-primary);">
+            <i class="fa-brands fa-github" style="font-size: 1.25rem;"></i>
+          </div>
+          <div class="scan-result-text">
+            <div class="scan-result-title" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span>${escapeHTML(item.serverName)}</span>
+              <span class="update-version-pill"><i class="fa-solid fa-tag" style="font-size: 0.7rem;"></i> ${escapeHTML(item.version)}</span>
+              <span class="update-status-badge ${badgeClass}">${badgeLabel}</span>
+            </div>
+            <span class="scan-result-url" style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.15rem;">
+              ${escapeHTML(item.repo || item.repoLabel || '')}
+              ${item.previousVersion && item.previousVersion !== item.version ? ` • Vorher: ${escapeHTML(item.previousVersion)}` : ''}
+            </span>
+          </div>
+        </div>
+        <div class="scan-result-actions">
+          <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" class="btn-release-link">
+            <span>${translate('updates_btn_release_notes')}</span>
+            <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem;"></i>
+          </a>
+        </div>
+      `;
+
+      updatesResultsArea.appendChild(row);
     });
+
+    // 2. Ausgeschlossene Dienste (wie Paperless) transparent auflisten
+    excludedServers.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'update-result-row is-excluded';
+
+      row.innerHTML = `
+        <div class="scan-result-info">
+          <div class="scan-result-icon" style="background: rgba(245, 158, 11, 0.1); color: #fcd34d;">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div class="scan-result-text">
+            <div class="scan-result-title" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span>${escapeHTML(item.serverName)}</span>
+              <span class="update-status-badge excluded">${translate('updates_badge_excluded')}</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      updatesResultsArea.appendChild(row);
+    });
+  }
+
+  function closeUpdatesDialog() {
+    if (updatesDialog) updatesDialog.close();
+  }
+
+  if (btnHeaderUpdates) {
+    btnHeaderUpdates.addEventListener('click', openAndRunUpdatesCheck);
+  }
+  if (btnRecheckUpdates) {
+    btnRecheckUpdates.addEventListener('click', openAndRunUpdatesCheck);
+  }
+  if (btnCloseUpdatesDialog) {
+    btnCloseUpdatesDialog.addEventListener('click', closeUpdatesDialog);
+  }
+  if (btnCancelUpdates) {
+    btnCancelUpdates.addEventListener('click', closeUpdatesDialog);
+  }
+  if (btnCheckUpdates) {
+    btnCheckUpdates.addEventListener('click', openAndRunUpdatesCheck);
   }
 
   // Check-All Event-Listener registrieren
@@ -1797,6 +1955,16 @@ document.addEventListener('DOMContentLoaded', () => {
       );
       if (!isDialogContent) closeSettingsDialog();
     });
+
+    if (updatesDialog) {
+      const outside = (e, dialog) => {
+        const r = dialog.getBoundingClientRect();
+        return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+      };
+      let pressedOutside = false;
+      updatesDialog.addEventListener('pointerdown', (e) => { pressedOutside = outside(e, updatesDialog); });
+      updatesDialog.addEventListener('pointerup', (e) => { if (pressedOutside && outside(e, updatesDialog)) closeUpdatesDialog(); });
+    }
   }
 
   // ==========================================================================

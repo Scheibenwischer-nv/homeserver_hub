@@ -621,11 +621,18 @@ async function checkWeeklyServerUpdates(forceTelegramReport = false) {
 
   const checkedRepos = new Map();
   const results = [];
+  const excludedServers = [];
   let newUpdatesCount = 0;
 
   for (const server of servers) {
     // Ausgeschlossene Server (z. B. Paperless oder manuell deaktivierte Dienste) überspringen
     if (server.ignoreUpdates || /paperless/i.test(server.name || '')) {
+      excludedServers.push({
+        serverId: server.id,
+        serverName: server.name,
+        category: server.category,
+        favicon: server.favicon || null
+      });
       continue;
     }
 
@@ -650,12 +657,16 @@ async function checkWeeklyServerUpdates(forceTelegramReport = false) {
       server.lastUpdateCheck = new Date().toISOString();
 
       results.push({
+        serverId: server.id,
         serverName: server.name,
         repoLabel: matched.label,
+        repo: matched.repo,
         version: releaseInfo.version,
         previousVersion,
         isNew,
-        url: releaseInfo.url
+        url: releaseInfo.url,
+        publishedAt: releaseInfo.publishedAt || null,
+        favicon: server.favicon || null
       });
     }
   }
@@ -698,9 +709,11 @@ async function checkWeeklyServerUpdates(forceTelegramReport = false) {
   return {
     checkedCount: results.length,
     newUpdatesCount,
+    excludedCount: excludedServers.length,
     telegramSent,
     lastWeeklyUpdateCheck: settings.telegram.lastWeeklyUpdateCheck,
-    results
+    results,
+    excludedServers
   };
 }
 

@@ -62,6 +62,9 @@
         <button id="btn-refresh" class="btn btn-secondary" title="Status jetzt aktualisieren" data-i18n-title="tooltip_refresh">
           <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="btn_refresh">Jetzt prüfen</span>
         </button>
+        <button id="btn-header-updates" class="btn btn-secondary" title="Auf neue Software-Updates prüfen" data-i18n-title="tooltip_updates">
+          <i class="fa-solid fa-box-open"></i> <span data-i18n="btn_updates">Updates prüfen</span>
+        </button>
         <button id="btn-settings" class="btn btn-secondary" title="Kategorien verwalten" data-i18n-title="tooltip_settings">
           <i class="fa-solid fa-gear"></i> <span data-i18n="btn_settings">Einstellungen</span>
         </button>
@@ -380,6 +383,36 @@
         </button>
         <button type="button" class="btn btn-primary" id="btn-import-selected" style="display: none;" disabled>
           <i class="fa-solid fa-file-import"></i> <span data-i18n="btn_import_selected">Ausgewählte hinzufügen</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Dialog für die Server-Update-Übersicht (GitHub Releases) -->
+  <dialog id="updates-dialog" closedby="any" aria-labelledby="updates-dialog-title">
+    <div class="dialog-content scan-dialog-content">
+      <header class="dialog-header">
+        <h2 id="updates-dialog-title" data-i18n="updates_dialog_title">Server-Updates (GitHub Releases)</h2>
+        <button type="button" class="btn-close" id="btn-close-updates-dialog" aria-label="Schließen">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </header>
+
+      <div class="scan-status-area" id="updates-status-box">
+        <p id="updates-status-text" data-i18n="updates_status_checking">Prüfe GitHub-Releases deiner eingetragenen Server...</p>
+        <div class="progress-bar-container" id="updates-progress-container">
+          <div class="progress-bar-fill" id="updates-progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="scan-results-area" id="updates-results-area">
+        <!-- Ergebniszeilen werden dynamisch per JS gerendert -->
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-updates" data-i18n="btn_close">Schließen</button>
+        <button type="button" class="btn btn-primary" id="btn-recheck-updates">
+          <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="btn_recheck_updates">Erneut prüfen</span>
         </button>
       </div>
     </div>
