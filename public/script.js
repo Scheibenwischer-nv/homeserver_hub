@@ -1610,8 +1610,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 1. Geprüfte GitHub-Dienste rendern
-    results.forEach(item => {
+    // 1. Geprüfte GitHub-Dienste sortieren (Neue Updates & Docker-Container zuerst) und rendern
+    const sortedResults = [...results].sort((a, b) => {
+      if (a.isNew !== b.isNew) return a.isNew ? -1 : 1;
+      if (a.canUpdateContainer !== b.canUpdateContainer) return a.canUpdateContainer ? -1 : 1;
+      return (a.serverName || '').localeCompare(b.serverName || '');
+    });
+
+    sortedResults.forEach(item => {
       const row = document.createElement('div');
       row.className = `update-result-row ${item.isNew ? 'is-new-update' : ''}`;
 
@@ -1619,11 +1625,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const badgeLabel = item.isNew ? translate('updates_badge_new') : translate('updates_badge_current');
 
       const containerMetaHtml = item.canUpdateContainer
-        ? `<div style="font-size: 0.75rem; color: var(--color-accent); margin-top: 0.25rem;">
-             <i class="fa-brands fa-docker"></i> Container: <code>${escapeHTML(item.containerName)}</code> (${escapeHTML(item.hostIp || '')})
-             ${item.rollbackAvailable ? ` • <span style="color: #fcd34d;"><i class="fa-solid fa-clock-rotate-left"></i> Backup bereit</span>` : ''}
+        ? `<div class="update-container-meta">
+             <span><i class="fa-brands fa-docker"></i> Container: <code>${escapeHTML(item.containerName)}</code> (${escapeHTML(item.hostIp || '')})</span>
+             ${item.rollbackAvailable ? `<span class="update-backup-pill"><i class="fa-solid fa-clock-rotate-left"></i> Backup bereit</span>` : ''}
            </div>`
-        : '';
+        : `<div class="update-container-meta" style="color: var(--text-dimmed);">
+             <span><i class="fa-solid fa-globe"></i> Externer Dienst (Nur Release-Info)</span>
+           </div>`;
 
       const updateBtnHtml = item.canUpdateContainer
         ? `<button type="button" class="btn-update-container" data-server-id="${escapeHTML(item.serverId)}" data-server-name="${escapeHTML(item.serverName)}" data-container-name="${escapeHTML(item.containerName)}">
@@ -1638,30 +1646,34 @@ document.addEventListener('DOMContentLoaded', () => {
         : '';
 
       row.innerHTML = `
-        <div class="scan-result-info">
-          <div class="scan-result-icon" style="background: rgba(139, 92, 246, 0.12); color: var(--color-primary);">
-            <i class="fa-brands fa-github" style="font-size: 1.25rem;"></i>
-          </div>
-          <div class="scan-result-text">
-            <div class="scan-result-title" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <span>${escapeHTML(item.serverName)}</span>
-              <span class="update-version-pill"><i class="fa-solid fa-tag" style="font-size: 0.7rem;"></i> ${escapeHTML(item.version)}</span>
-              <span class="update-status-badge ${badgeClass}">${badgeLabel}</span>
+        <div class="update-row-header">
+          <div class="update-row-main">
+            <div class="scan-result-icon" style="background: rgba(139, 92, 246, 0.12); color: var(--color-primary);">
+              <i class="fa-brands fa-github" style="font-size: 1.25rem;"></i>
             </div>
-            <span class="scan-result-url" style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.15rem;">
-              ${escapeHTML(item.repo || item.repoLabel || '')}
-              ${item.previousVersion && item.previousVersion !== item.version ? ` • Vorher: ${escapeHTML(item.previousVersion)}` : ''}
-            </span>
-            ${containerMetaHtml}
+            <div class="update-row-title-group">
+              <div class="update-row-name">${escapeHTML(item.serverName)}</div>
+              <div class="update-row-repo">
+                ${escapeHTML(item.repo || item.repoLabel || '')}
+                ${item.previousVersion && item.previousVersion !== item.version ? ` • Vorher: ${escapeHTML(item.previousVersion)}` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="update-row-badges">
+            <span class="update-version-pill"><i class="fa-solid fa-tag" style="font-size: 0.7rem;"></i> ${escapeHTML(item.version)}</span>
+            <span class="update-status-badge ${badgeClass}">${badgeLabel}</span>
           </div>
         </div>
-        <div class="scan-result-actions update-actions-group">
-          ${updateBtnHtml}
-          ${rollbackBtnHtml}
-          <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" class="btn-release-link">
-            <span>${translate('updates_btn_release_notes')}</span>
-            <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem;"></i>
-          </a>
+        <div class="update-row-footer">
+          ${containerMetaHtml}
+          <div class="update-actions-group">
+            ${updateBtnHtml}
+            ${rollbackBtnHtml}
+            <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" class="btn-release-link">
+              <span>${translate('updates_btn_release_notes')}</span>
+              <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem;"></i>
+            </a>
+          </div>
         </div>
       `;
 
@@ -1684,15 +1696,18 @@ document.addEventListener('DOMContentLoaded', () => {
       row.className = 'update-result-row is-excluded';
 
       row.innerHTML = `
-        <div class="scan-result-info">
-          <div class="scan-result-icon" style="background: rgba(245, 158, 11, 0.1); color: #fcd34d;">
-            <i class="fa-solid fa-shield-halved"></i>
-          </div>
-          <div class="scan-result-text">
-            <div class="scan-result-title" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <span>${escapeHTML(item.serverName)}</span>
-              <span class="update-status-badge excluded">${translate('updates_badge_excluded')}</span>
+        <div class="update-row-header">
+          <div class="update-row-main">
+            <div class="scan-result-icon" style="background: rgba(245, 158, 11, 0.1); color: #fcd34d;">
+              <i class="fa-solid fa-shield-halved"></i>
             </div>
+            <div class="update-row-title-group">
+              <div class="update-row-name">${escapeHTML(item.serverName)}</div>
+              <div class="update-row-repo">Updates für diesen Dienst sind dauerhaft gesperrt</div>
+            </div>
+          </div>
+          <div class="update-row-badges">
+            <span class="update-status-badge excluded">${translate('updates_badge_excluded')}</span>
           </div>
         </div>
       `;

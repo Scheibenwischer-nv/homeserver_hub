@@ -1451,32 +1451,131 @@ dialog[open]::backdrop {
    UPDATE-ÜBERSICHT DIALOG & VERSIONS-BADGES
    ========================================================================== */
 
-.update-result-row {
+#updates-dialog {
+  max-width: 680px;
+}
+
+#updates-results-area {
+  max-height: 430px;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.9rem 1.15rem;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0.4rem 0.5rem 0;
+}
+
+.update-result-row {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem 1.15rem;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: 0.7rem;
-  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .update-result-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.055);
   border-color: rgba(139, 92, 246, 0.35);
 }
 
 .update-result-row.is-new-update {
-  border-color: rgba(16, 185, 129, 0.45);
-  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.07);
 }
 
 .update-result-row.is-excluded {
-  opacity: 0.65;
+  opacity: 0.7;
   border-style: dashed;
+}
+
+.update-row-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.update-row-main {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.update-row-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.update-row-name {
+  font-weight: 700;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.update-row-repo {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.update-row-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.update-row-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.update-container-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--color-accent);
+}
+
+.update-container-meta code {
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  padding: 0.1rem 0.4rem;
+  border-radius: 5px;
+  color: #a5f3fc;
+  font-size: 0.75rem;
+}
+
+.update-backup-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 0.12rem 0.45rem;
+  border-radius: 6px;
 }
 
 .update-version-pill {
@@ -1486,11 +1585,12 @@ dialog[open]::backdrop {
   font-family: monospace;
   font-size: 0.8rem;
   font-weight: 700;
-  padding: 0.2rem 0.55rem;
+  padding: 0.22rem 0.6rem;
   border-radius: 6px;
   background: rgba(139, 92, 246, 0.15);
   border: 1px solid rgba(139, 92, 246, 0.35);
   color: #ddd6fe;
+  white-space: nowrap;
 }
 
 .update-status-badge {
@@ -1499,9 +1599,10 @@ dialog[open]::backdrop {
   gap: 0.3rem;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.2rem 0.55rem;
+  padding: 0.22rem 0.6rem;
   border-radius: 999px;
   letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 .update-status-badge.up-to-date {
@@ -1527,9 +1628,9 @@ dialog[open]::backdrop {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.45rem 0.85rem;
-  border-radius: 10px;
-  font-size: 0.8rem;
+  padding: 0.42rem 0.8rem;
+  border-radius: 9px;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #fff;
   background: rgba(255, 255, 255, 0.06);
@@ -1550,17 +1651,17 @@ dialog[open]::backdrop {
   align-items: center;
   gap: 0.45rem;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  margin-left: auto;
 }
 
 .btn-update-container {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.45rem 0.85rem;
-  border-radius: 10px;
+  padding: 0.42rem 0.8rem;
+  border-radius: 9px;
   font-family: var(--font-main);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #fff;
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.25));
@@ -1581,10 +1682,10 @@ dialog[open]::backdrop {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.45rem 0.85rem;
-  border-radius: 10px;
+  padding: 0.42rem 0.8rem;
+  border-radius: 9px;
   font-family: var(--font-main);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #fde68a;
   background: rgba(245, 158, 11, 0.14);
