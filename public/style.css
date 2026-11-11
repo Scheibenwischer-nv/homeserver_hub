@@ -1618,6 +1618,28 @@ dialog[open]::backdrop {
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
 }
 
+.update-status-badge.installed-latest {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.btn-already-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.42rem 0.78rem;
+  border-radius: 9px;
+  font-family: var(--font-main);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px dashed rgba(16, 185, 129, 0.35);
+  white-space: nowrap;
+  user-select: none;
+}
+
 .update-status-badge.excluded {
   background: rgba(245, 158, 11, 0.12);
   border: 1px solid rgba(245, 158, 11, 0.3);

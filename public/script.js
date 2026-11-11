@@ -89,9 +89,11 @@ const TRANSLATIONS = {
     updates_telegram_sent_hint: "📲 Bericht wurde zusätzlich per Telegram gesendet.",
     updates_badge_new: "🆕 Neues Update",
     updates_badge_current: "✅ Aktuellste Version",
+    updates_badge_installed: "✅ Aktuell installiert",
     updates_badge_excluded: "🔒 Ausgeschlossen (Nicht updaten)",
     updates_btn_release_notes: "Release Notes",
     updates_btn_start_update: "Update starten",
+    updates_btn_already_updated: "Bereits aktuell",
     updates_btn_updating: "Aktualisiere...",
     updates_btn_rollback: "Letzte Version",
     updates_btn_rolling_back: "Stelle wieder her...",
@@ -283,9 +285,11 @@ const TRANSLATIONS = {
     updates_telegram_sent_hint: "📲 Report was also sent via Telegram.",
     updates_badge_new: "🆕 New Update",
     updates_badge_current: "✅ Latest Release",
+    updates_badge_installed: "✅ Up to Date (Installed)",
     updates_badge_excluded: "🔒 Excluded (Do not update)",
     updates_btn_release_notes: "Release Notes",
     updates_btn_start_update: "Start Update",
+    updates_btn_already_updated: "Up to Date",
     updates_btn_updating: "Updating...",
     updates_btn_rollback: "Previous Version",
     updates_btn_rolling_back: "Restoring...",
@@ -1610,19 +1614,30 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 1. Geprüfte GitHub-Dienste sortieren (Neue Updates & Docker-Container zuerst) und rendern
+    // 1. Geprüfte GitHub-Dienste sortieren (Offene Container-Updates zuerst, dann bereits aktualisierte Container, dann externe Dienste)
     const sortedResults = [...results].sort((a, b) => {
+      const aNeedsUpdate = a.canUpdateContainer && !a.isInstalledLatest;
+      const bNeedsUpdate = b.canUpdateContainer && !b.isInstalledLatest;
+      if (aNeedsUpdate !== bNeedsUpdate) return aNeedsUpdate ? -1 : 1;
       if (a.isNew !== b.isNew) return a.isNew ? -1 : 1;
       if (a.canUpdateContainer !== b.canUpdateContainer) return a.canUpdateContainer ? -1 : 1;
       return (a.serverName || '').localeCompare(b.serverName || '');
     });
 
     sortedResults.forEach(item => {
+      const isAlreadyInstalled = Boolean(item.isInstalledLatest);
       const row = document.createElement('div');
-      row.className = `update-result-row ${item.isNew ? 'is-new-update' : ''}`;
+      row.className = `update-result-row ${item.isNew && !isAlreadyInstalled ? 'is-new-update' : ''} ${isAlreadyInstalled ? 'is-installed-latest' : ''}`;
 
-      const badgeClass = item.isNew ? 'new-release' : 'up-to-date';
-      const badgeLabel = item.isNew ? translate('updates_badge_new') : translate('updates_badge_current');
+      let badgeClass = 'up-to-date';
+      let badgeLabel = translate('updates_badge_current');
+      if (isAlreadyInstalled) {
+        badgeClass = 'installed-latest';
+        badgeLabel = translate('updates_badge_installed');
+      } else if (item.isNew) {
+        badgeClass = 'new-release';
+        badgeLabel = translate('updates_badge_new');
+      }
 
       const containerMetaHtml = item.canUpdateContainer
         ? `<div class="update-container-meta">
@@ -1633,11 +1648,18 @@ document.addEventListener('DOMContentLoaded', () => {
              <span><i class="fa-solid fa-globe"></i> Externer Dienst (Nur Release-Info)</span>
            </div>`;
 
-      const updateBtnHtml = item.canUpdateContainer
-        ? `<button type="button" class="btn-update-container" data-server-id="${escapeHTML(item.serverId)}" data-server-name="${escapeHTML(item.serverName)}" data-container-name="${escapeHTML(item.containerName)}">
+      let updateBtnHtml = '';
+      if (item.canUpdateContainer) {
+        if (isAlreadyInstalled) {
+          updateBtnHtml = `<span class="btn-already-updated">
+             <i class="fa-solid fa-circle-check"></i> <span>${translate('updates_btn_already_updated')}</span>
+           </span>`;
+        } else {
+          updateBtnHtml = `<button type="button" class="btn-update-container" data-server-id="${escapeHTML(item.serverId)}" data-server-name="${escapeHTML(item.serverName)}" data-container-name="${escapeHTML(item.containerName)}">
              <i class="fa-solid fa-download"></i> <span>${translate('updates_btn_start_update')}</span>
-           </button>`
-        : '';
+           </button>`;
+        }
+      }
 
       const rollbackBtnHtml = (item.canUpdateContainer && item.rollbackAvailable)
         ? `<button type="button" class="btn-rollback-container" data-server-id="${escapeHTML(item.serverId)}" data-server-name="${escapeHTML(item.serverName)}" data-container-name="${escapeHTML(item.containerName)}" title="${escapeHTML(item.rollbackVersion || '')}">

@@ -520,9 +520,24 @@ async function checkAllServers() {
     }
   }
 
-  await writeServers(updatedServers);
+  // Aktuelle servers.json frisch einlesen, damit zwischenzeitliche Update-/Rollback-Daten nicht überschrieben werden
+  const currentServers = await readServers();
+  const statusResultMap = new Map(updatedServers.map(s => [s.id, s]));
+  const mergedServers = currentServers.map(s => {
+    const checked = statusResultMap.get(s.id);
+    if (!checked) return s;
+    return {
+      ...s,
+      status: checked.status,
+      latency: checked.latency,
+      lastChecked: checked.lastChecked,
+      favicon: checked.favicon || s.favicon
+    };
+  });
+
+  await writeServers(mergedServers);
   console.log('[StatusCheck] Status-Check abgeschlossen.');
-  return updatedServers;
+  return mergedServers;
 }
 
 // ==========================================================================
@@ -726,7 +741,43 @@ function parseServerHostAndPort(serverUrl) {
   }
 }
 
+async function runRemoteSshCommand(hostIp, commandStr, timeoutMs = 300000) {
+  const sshArgs = [
+    '-o', 'BatchMode=yes',
+    '-o', 'StrictHostKeyChecking=accept-new',
+    '-o', 'ConnectTimeout=8',
+    `pi@${hostIp}`,
+    commandStr
+  ];
+  return new Promise((resolve, reject) => {
+    execFile('ssh', sshArgs, { timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+      if (err) return reject(new Error((stderr || err.message || '').trim()));
+      resolve({ stdout: (stdout || '').trim(), stderr: (stderr || '').trim() });
+    });
+  });
+}
+
 function matchContainerFromList(server, containers, hostIp, port) {
+  const sName = (server.name || '').toLowerCase();
+
+  // Sicherheits-Sperre: Niemals Paperless-Container als updatebar zurückgeben!
+  if (isServerExcludedFromUpdates(server) || sName.includes('paperless')) {
+    return null;
+  }
+
+  // Spezialfall: PhotoPrism läuft auf 192.168.100.251 als Podman-Systemd-Service (container-photoprism-app.service)
+  if (hostIp === '192.168.100.251' && (sName.includes('photoprism') || port === 2342)) {
+    return {
+      hostIp,
+      isPodman: true,
+      systemdUnit: 'container-photoprism-app.service',
+      containerId: 'photoprism-app',
+      containerName: 'photoprism-app (Podman)',
+      image: 'docker.io/photoprism/photoprism:latest',
+      imageId: 'podman-photoprism-latest'
+    };
+  }
+
   if (!Array.isArray(containers) || containers.length === 0) return null;
 
   // 1. Primärer Treffer über den veröffentlichten TCP-Port
@@ -736,7 +787,6 @@ function matchContainerFromList(server, containers, hostIp, port) {
 
   // 2. Fallback über Namen, falls kein Port-Match
   if (!found) {
-    const sName = (server.name || '').toLowerCase();
     found = containers.find(c => {
       const cNames = (c.Names || []).map(n => n.replace(/^\//, '').toLowerCase());
       if (sName.includes('n8n')) return cNames.includes('n8n');
@@ -969,7 +1019,10 @@ async function checkWeeklyServerUpdates(forceTelegramReport = false) {
 
     if (releaseInfo) {
       const previousVersion = server.lastKnownRelease || null;
-      const isNew = previousVersion !== null && previousVersion !== releaseInfo.version;
+      const isInstalledLatest = Boolean(
+        server.installedVersion && server.installedVersion === releaseInfo.version
+      );
+      const isNew = !isInstalledLatest && previousVersion !== null && previousVersion !== releaseInfo.version;
       if (isNew) {
         newUpdatesCount++;
       }
@@ -986,6 +1039,7 @@ async function checkWeeklyServerUpdates(forceTelegramReport = false) {
         version: releaseInfo.version,
         previousVersion,
         isNew,
+        isInstalledLatest,
         url: releaseInfo.url,
         publishedAt: releaseInfo.publishedAt || null,
         favicon: server.favicon || null,
@@ -1001,7 +1055,20 @@ async function checkWeeklyServerUpdates(forceTelegramReport = false) {
     }
   }
 
-  await writeServers(servers);
+  // Frisch einlesen & nur die Release-Check-Felder mergen
+  const currentServers = await readServers();
+  const checkedMap = new Map(servers.map(s => [s.id, s]));
+  const mergedServers = currentServers.map(s => {
+    const updated = checkedMap.get(s.id);
+    if (!updated) return s;
+    return {
+      ...s,
+      lastKnownRelease: updated.lastKnownRelease ?? s.lastKnownRelease,
+      releaseUrl: updated.releaseUrl ?? s.releaseUrl,
+      lastUpdateCheck: updated.lastUpdateCheck ?? s.lastUpdateCheck
+    };
+  });
+  await writeServers(mergedServers);
 
   // Zeitstempel der letzten wöchentlichen Prüfung in settings.json sichern
   if (!settings.telegram) {
@@ -1130,63 +1197,99 @@ app.post('/api/servers/:id/update-container', async (req, res) => {
       return res.status(404).json({ error: 'Kein passender Docker-Container für diesen Server gefunden.' });
     }
 
-    // 1. Laufenden Container inspizieren
-    const inspectRes = await dockerEngineRequest(hostIp, 'GET', `/containers/${matchedContainer.containerId}/json`);
-    const inspectData = inspectRes.data;
-    const currentImageId = inspectData.Image;
-    const configuredImage = inspectData.Config.Image;
-    const cleanName = matchedContainer.containerName;
+    // Aktuellste GitHub-Release-Version abrufen, damit installedVersion und lastKnownRelease exakt übereinstimmen
+    let latestGithubVersion = server.lastKnownRelease || null;
+    const matchedRepo = matchGithubRepo(server.name);
+    if (matchedRepo) {
+      const relInfo = await fetchLatestGithubRelease(matchedRepo.repo);
+      if (relInfo && relInfo.version) {
+        latestGithubVersion = relInfo.version;
+      }
+    }
 
-    // 2. Aktuelles Image lokal als Rollback-Snapshot taggen (damit es nie gelöscht wird)
-    const rollbackRepo = `homeserver-rollback/${cleanName.toLowerCase().replace(/[^a-z0-9_.-]/g, '-')}`;
+    const cleanName = matchedContainer.containerName;
+    const safeSlug = cleanName.toLowerCase().replace(/[^a-z0-9_.-]/g, '-');
+    const rollbackRepo = `homeserver-rollback/${safeSlug}`;
     const rollbackTag = 'previous';
     const rollbackFullTag = `${rollbackRepo}:${rollbackTag}`;
 
-    console.log(`[ContainerUpdate] Sichere aktuelles Image (${currentImageId.slice(0, 19)}) von "${cleanName}" als ${rollbackFullTag}...`);
-    await dockerEngineRequest(
-      hostIp,
-      'POST',
-      `/images/${encodeURIComponent(currentImageId)}/tag?repo=${encodeURIComponent(rollbackRepo)}&tag=${encodeURIComponent(rollbackTag)}`
-    );
+    let currentImageId = matchedContainer.imageId || 'previous';
+    let configuredImage = matchedContainer.image;
 
-    // 3. Neues Image von der Registry pullen (während der alte Container noch weiterläuft!)
-    const { repo, tag } = splitImageRepoTag(configuredImage);
-    console.log(`[ContainerUpdate] Lade neuestes Image ${repo}:${tag} auf ${hostIp} herunter...`);
-    await dockerEngineRequest(
-      hostIp,
-      'POST',
-      `/images/create?fromImage=${encodeURIComponent(repo)}&tag=${encodeURIComponent(tag)}`,
-      null,
-      300000 // 5 Minuten Timeout für große Images
-    );
+    if (matchedContainer.isPodman) {
+      // Podman-Container (z. B. PhotoPrism auf 192.168.100.251 via Systemd)
+      console.log(`[ContainerUpdate] Sichere und aktualisiere Podman-Container "${cleanName}" auf ${hostIp}...`);
+      const podmanImgRes = await runRemoteSshCommand(
+        hostIp,
+        `sudo -n podman image inspect ${configuredImage} --format '{{.Id}}' || echo "podman-previous"`
+      );
+      currentImageId = (podmanImgRes.stdout || 'podman-previous').trim();
 
-    // 4. Container mit dem neuen Image neu erstellen & starten
-    console.log(`[ContainerUpdate] Starte Container "${cleanName}" mit neuem Image neu...`);
-    await recreateContainerWithImage(hostIp, inspectData, configuredImage);
+      await runRemoteSshCommand(
+        hostIp,
+        `sudo -n podman tag ${configuredImage} ${rollbackFullTag} && sudo -n podman pull ${configuredImage} && sudo -n systemctl restart ${matchedContainer.systemdUnit}`
+      );
+    } else {
+      // 1. Laufenden Docker-Container inspizieren
+      const inspectRes = await dockerEngineRequest(hostIp, 'GET', `/containers/${matchedContainer.containerId}/json`);
+      const inspectData = inspectRes.data;
+      currentImageId = inspectData.Image;
+      configuredImage = inspectData.Config.Image;
 
-    // 5. Rollback-Metadaten in servers.json speichern
-    const previousVerLabel = server.installedVersion || `${configuredImage} (${currentImageId.replace('sha256:', '').slice(0, 8)})`;
-    server.rollbackAvailable = true;
-    server.rollbackImageId = currentImageId;
-    server.rollbackImageTag = rollbackFullTag;
-    server.rollbackOriginalImage = configuredImage;
-    server.rollbackContainerName = cleanName;
-    server.rollbackHostIp = hostIp;
-    server.rollbackVersion = previousVerLabel;
-    server.rollbackSavedAt = new Date().toISOString();
-    server.installedVersion = server.lastKnownRelease || 'Aktuell';
-    server.lastUpdatedAt = new Date().toISOString();
+      // 2. Aktuelles Image lokal als Rollback-Snapshot taggen (damit es nie gelöscht wird)
+      console.log(`[ContainerUpdate] Sichere aktuelles Image (${currentImageId.slice(0, 19)}) von "${cleanName}" als ${rollbackFullTag}...`);
+      await dockerEngineRequest(
+        hostIp,
+        'POST',
+        `/images/${encodeURIComponent(currentImageId)}/tag?repo=${encodeURIComponent(rollbackRepo)}&tag=${encodeURIComponent(rollbackTag)}`
+      );
 
-    await writeServers(servers);
-    console.log(`[ContainerUpdate] Update für "${cleanName}" erfolgreich abgeschlossen!`);
+      // 3. Neues Image von der Registry pullen (während der alte Container noch weiterläuft!)
+      const { repo, tag } = splitImageRepoTag(configuredImage);
+      console.log(`[ContainerUpdate] Lade neuestes Image ${repo}:${tag} auf ${hostIp} herunter...`);
+      await dockerEngineRequest(
+        hostIp,
+        'POST',
+        `/images/create?fromImage=${encodeURIComponent(repo)}&tag=${encodeURIComponent(tag)}`,
+        null,
+        300000 // 5 Minuten Timeout für große Images
+      );
+
+      // 4. Container mit dem neuen Image neu erstellen & starten
+      console.log(`[ContainerUpdate] Starte Container "${cleanName}" mit neuem Image neu...`);
+      await recreateContainerWithImage(hostIp, inspectData, configuredImage);
+    }
+
+    // 5. Rollback-Metadaten in frisch gelesener servers.json speichern
+    const freshServers = await readServers();
+    const freshIndex = freshServers.findIndex(s => s.id === id);
+    const targetServer = freshIndex !== -1 ? freshServers[freshIndex] : server;
+
+    const previousVerLabel = targetServer.installedVersion || `${configuredImage} (${currentImageId.replace('sha256:', '').slice(0, 8)})`;
+    targetServer.rollbackAvailable = true;
+    targetServer.rollbackImageId = currentImageId;
+    targetServer.rollbackImageTag = rollbackFullTag;
+    targetServer.rollbackOriginalImage = configuredImage;
+    targetServer.rollbackContainerName = cleanName;
+    targetServer.rollbackHostIp = hostIp;
+    targetServer.rollbackVersion = previousVerLabel;
+    targetServer.rollbackSavedAt = new Date().toISOString();
+    if (latestGithubVersion) {
+      targetServer.lastKnownRelease = latestGithubVersion;
+    }
+    targetServer.installedVersion = latestGithubVersion || targetServer.lastKnownRelease || 'Aktuell';
+    targetServer.lastUpdatedAt = new Date().toISOString();
+
+    await writeServers(freshServers);
+    console.log(`[ContainerUpdate] Update für "${cleanName}" auf Version "${targetServer.installedVersion}" erfolgreich abgeschlossen!`);
 
     res.json({
       success: true,
       containerName: cleanName,
-      installedVersion: server.installedVersion,
+      installedVersion: targetServer.installedVersion,
       rollbackAvailable: true,
-      rollbackVersion: server.rollbackVersion,
-      rollbackSavedAt: server.rollbackSavedAt
+      rollbackVersion: targetServer.rollbackVersion,
+      rollbackSavedAt: targetServer.rollbackSavedAt
     });
   } catch (error) {
     console.error(`[ContainerUpdate] Fehler beim Update von Server ${id}:`, error);
@@ -1221,33 +1324,47 @@ app.post('/api/servers/:id/rollback-container', async (req, res) => {
       return res.status(404).json({ error: 'Laufender Container für das Rollback wurde nicht gefunden.' });
     }
 
-    const inspectRes = await dockerEngineRequest(targetHostIp, 'GET', `/containers/${matchedContainer.containerId}/json`);
-    const inspectData = inspectRes.data;
-    const configuredImage = server.rollbackOriginalImage || inspectData.Config.Image;
     const rollbackSource = server.rollbackImageTag || server.rollbackImageId;
 
-    // 1. Gesichertes Rollback-Image wieder auf den ursprünglichen Image-Tag setzen
-    const { repo, tag } = splitImageRepoTag(configuredImage);
-    console.log(`[ContainerRollback] Stelle Image ${rollbackSource} als ${repo}:${tag} wieder her...`);
-    await dockerEngineRequest(
-      targetHostIp,
-      'POST',
-      `/images/${encodeURIComponent(rollbackSource)}/tag?repo=${encodeURIComponent(repo)}&tag=${encodeURIComponent(tag)}`
-    );
+    if (matchedContainer.isPodman) {
+      const configuredImage = server.rollbackOriginalImage || matchedContainer.image;
+      console.log(`[ContainerRollback] Stelle Podman-Image ${rollbackSource} als ${configuredImage} wieder her...`);
+      await runRemoteSshCommand(
+        targetHostIp,
+        `sudo -n podman tag ${rollbackSource} ${configuredImage} && sudo -n systemctl restart ${matchedContainer.systemdUnit}`
+      );
+    } else {
+      const inspectRes = await dockerEngineRequest(targetHostIp, 'GET', `/containers/${matchedContainer.containerId}/json`);
+      const inspectData = inspectRes.data;
+      const configuredImage = server.rollbackOriginalImage || inspectData.Config.Image;
 
-    // 2. Container mit dem wiederhergestellten Image neu starten
-    console.log(`[ContainerRollback] Starte Container "${matchedContainer.containerName}" mit vorheriger Version...`);
-    await recreateContainerWithImage(targetHostIp, inspectData, configuredImage);
+      // 1. Gesichertes Rollback-Image wieder auf den ursprünglichen Image-Tag setzen
+      const { repo, tag } = splitImageRepoTag(configuredImage);
+      console.log(`[ContainerRollback] Stelle Image ${rollbackSource} als ${repo}:${tag} wieder her...`);
+      await dockerEngineRequest(
+        targetHostIp,
+        'POST',
+        `/images/${encodeURIComponent(rollbackSource)}/tag?repo=${encodeURIComponent(repo)}&tag=${encodeURIComponent(tag)}`
+      );
 
-    server.installedVersion = server.rollbackVersion || 'Vorherige Version';
-    server.lastRolledBackAt = new Date().toISOString();
-    await writeServers(servers);
+      // 2. Container mit dem wiederhergestellten Image neu starten
+      console.log(`[ContainerRollback] Starte Container "${matchedContainer.containerName}" mit vorheriger Version...`);
+      await recreateContainerWithImage(targetHostIp, inspectData, configuredImage);
+    }
+
+    const freshServers = await readServers();
+    const freshIndex = freshServers.findIndex(s => s.id === id);
+    const targetServer = freshIndex !== -1 ? freshServers[freshIndex] : server;
+
+    targetServer.installedVersion = targetServer.rollbackVersion || 'Vorherige Version';
+    targetServer.lastRolledBackAt = new Date().toISOString();
+    await writeServers(freshServers);
 
     console.log(`[ContainerRollback] Rollback für "${matchedContainer.containerName}" erfolgreich abgeschlossen!`);
     res.json({
       success: true,
       containerName: matchedContainer.containerName,
-      restoredVersion: server.installedVersion
+      restoredVersion: targetServer.installedVersion
     });
   } catch (error) {
     console.error(`[ContainerRollback] Fehler beim Rollback von Server ${id}:`, error);
